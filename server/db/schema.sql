@@ -1952,6 +1952,13 @@ CREATE TABLE IF NOT EXISTS crm_accounts (
   district_id INT UNSIGNED NULL,
   description TEXT NULL,
   archived_at DATETIME NULL,
+  -- A CRM Admin's hand-set Customer label for an account (follow-up F13): only the value 'customer', with the reason and the evidence, who set it and when. NULL means the label is worked out
+  -- from purchases as usual. Releasing it clears all five.
+  label_override VARCHAR(12) NULL,
+  label_override_reason VARCHAR(120) NULL,
+  label_override_evidence VARCHAR(120) NULL,
+  label_override_by_admin_id INT UNSIGNED NULL,
+  label_override_at DATETIME NULL,
   created_by_admin_id INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

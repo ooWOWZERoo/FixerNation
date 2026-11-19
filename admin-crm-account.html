@@ -76,9 +76,12 @@
     h += '<div class="a-card"><div class="a-card-head"><h2>Summary</h2><div class="crm-row-actions">' +
       (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="editAcct">Edit</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="addPerson">Add a person</button>' : '') +
       (C.can('edit_deal') && !a.archivedAt ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="newDeal">New deal</button>' : '') +
+      (C.can('set_customer') && !a.archivedAt && a.handSetCustomer ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="releaseCust">Release hand-set Customer…</button>' : '') +
+      (C.can('set_customer') && !a.archivedAt && !a.handSetCustomer && a.relationship !== 'customer' ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="markCust">Mark as Customer (hand-set)…</button>' : '') +
       (C.can('merge') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="mergeAcct">Merge into another…</button><button type="button" class="a-btn a-btn-outline a-btn-sm" id="archAcct">' + (a.archivedAt ? 'Restore' : 'Archive') + '</button>' : '') +
       '</div></div><dl class="crm-kv">' +
-      '<dt>What it is to us</dt><dd>' + relPills(a) + (a.relationshipWhy ? '<div class="crm-small crm-muted">' + esc(a.relationshipWhy) + '</div>' : '') + '</dd>' +
+      '<dt>What it is to us</dt><dd>' + relPills(a) + (a.handSetCustomer ? ' <span class="a-pill a-pill-neutral">Set by hand</span>' : '') + (a.relationshipWhy ? '<div class="crm-small crm-muted">' + esc(a.relationshipWhy) + '</div>' : '') +
+        (data.customerOverride ? '<div class="crm-small crm-muted">Evidence: ' + esc(data.customerOverride.evidence) + (data.customerOverride.by ? ' · set by ' + esc(data.customerOverride.by) : '') + (data.customerOverride.at ? ' on ' + esc(C.date(data.customerOverride.at)) : '') + '</div>' : '') + '</dd>' +
       '<dt>Type</dt><dd>' + esc(C.label(C.ACCOUNT_TYPES, a.accountType)) + '</dd>' +
       '<dt>State</dt><dd>' + (a.state ? esc(a.state) : '<span class="crm-muted">Not set</span>') + '</dd>' +
       '<dt>Website</dt><dd>' + (a.websiteDomain ? esc(a.websiteDomain) : '<span class="crm-muted">Not set</span>') + '</dd>' +
@@ -132,7 +135,7 @@
     FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
-    on('#editAcct', editAccount); on('#addPerson', addPerson); on('#newDeal', newDeal); on('#mergeAcct', mergeAccount); on('#archAcct', archive);
+    on('#editAcct', editAccount); on('#addPerson', addPerson); on('#newDeal', newDeal); on('#mergeAcct', mergeAccount); on('#markCust', markCustomer); on('#releaseCust', releaseCustomer); on('#archAcct', archive);
     var ow = document.getElementById('ownerSel');
     if (ow) ow.addEventListener('change', function () {
       C.api('PUT', '/api/crm/accounts/' + id, { assignedAdminId: ow.value ? Number(ow.value) : null }).then(function (r) { if (r.ok) C.toast('Owner saved'); else { C.toast(C.problem(r)); load(); } });
@@ -224,6 +227,28 @@
 
   function newDeal() { C.newDealDialog({ accountId: id, accountName: data.account.name }); }
 
+  // Follow-up F13: CRM Admin only (the server decides). A hand-set Customer is for a school that has paid or committed in a way the system cannot see (for example a purchase order received
+  // but not yet marked paid). It needs a reason AND the evidence, is saved in the audit trail, never changes a purchase, and can be released.
+  function markCustomer() {
+    C.dialog({
+      title: 'Mark ' + data.account.name + ' as a Customer', submit: 'Mark as Customer',
+      body: '<p class="crm-notice">Use this only when you can point to proof that this organization has bought, which the system cannot see on its own (for example a purchase order received but not yet marked paid). It shows as "set by hand", counts as a Customer in the lists and totals, and changes no purchase. Both boxes are saved in the audit trail. You can release it later.</p>' +
+        C.field('Why', '<input type="text" id="cWhy" maxlength="120" required placeholder="e.g. Licensed under quote 307785">', '', 'cWhy') +
+        C.field('Evidence', '<input type="text" id="cEv" maxlength="120" required placeholder="e.g. PO 4471 received 11 Nov">', 'Do not paste account or card numbers.', 'cEv'),
+      onSubmit: function (f) {
+        return C.api('POST', '/api/crm/accounts/' + id + '/customer-override', { reason: f.querySelector('#cWhy').value, evidence: f.querySelector('#cEv').value }).then(function (r) { if (r.ok) { C.toast('Marked as Customer'); load(); return; } return C.problem(r); });
+      }
+    });
+  }
+  function releaseCustomer() {
+    C.dialog({
+      title: 'Release the hand-set Customer label', submit: 'Release', danger: true,
+      body: '<p>' + esc(data.account.name) + ' goes back to being labelled from its purchases and deals. If no paid purchase is placed on it, it will show as a Prospect or Suspect again.</p>' + C.field('Why', '<input type="text" id="rWhy" maxlength="255" required>', '', 'rWhy'),
+      onSubmit: function (f) {
+        return C.api('POST', '/api/crm/accounts/' + id + '/release-customer-override', { reason: f.querySelector('#rWhy').value }).then(function (r) { if (r.ok) { C.toast('Released'); load(); return; } return C.problem(r); });
+      }
+    });
+  }
   function mergeAccount() {
     var dlg = C.dialog({
       title: 'Merge “' + data.account.name + '” into another account', submit: 'Merge', danger: true,

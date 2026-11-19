@@ -42,6 +42,7 @@ CREATE TABLE crm_pipeline_stages (id INTEGER PRIMARY KEY AUTOINCREMENT, stage_ke
 CREATE TABLE crm_loss_reasons (id INTEGER PRIMARY KEY AUTOINCREMENT, reason_key TEXT UNIQUE, label TEXT, sort_order INTEGER DEFAULT 0, is_active INTEGER DEFAULT 1);
 CREATE TABLE crm_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, account_type TEXT NOT NULL DEFAULT 'school', website_domain TEXT, state TEXT,
   assigned_admin_id INTEGER, source TEXT, parent_account_id INTEGER, school_id INTEGER UNIQUE, district_id INTEGER UNIQUE, description TEXT, archived_at TEXT,
+  label_override TEXT, label_override_reason TEXT, label_override_evidence TEXT, label_override_by_admin_id INTEGER, label_override_at TEXT,
   created_by_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE crm_account_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER NOT NULL, contact_id INTEGER NOT NULL, title TEXT, is_primary INTEGER DEFAULT 0,
   is_champion INTEGER DEFAULT 0, is_decision_maker INTEGER DEFAULT 0, is_procurement INTEGER DEFAULT 0, is_finance INTEGER DEFAULT 0, started_on TEXT, ended_on TEXT,

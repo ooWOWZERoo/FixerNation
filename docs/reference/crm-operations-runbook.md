@@ -58,6 +58,8 @@ Customer Hub > **Reports** has fourteen reports (the original six, plus eight ad
 10. `alter-add-crm-import-undo.js` (follow-up F6: who each import created, and the undo columns on the batch; before it has run imports work as before and Undo is not offered)
 11. `alter-add-crm-task-reminder-time.js` (follow-up F7: the reminder time and zone on tasks, and the reminder ledger; before it has run a reminder time is simply not saved and no reminder email can go out)
 
+12. `alter-add-crm-account-customer-override.js` (follow-up F13: the hand-set Customer label on an account, five columns on `crm_accounts`; before it has run every label works as before and the account page's Mark as Customer (hand-set) button says it is not available yet)
+
 Phase 7 added **no** database change. Fresh installs get everything from `server/db/schema.sql`.
 
 **Audit log:** Customer Hub > Hub Settings > "Read the audit log" (CRM Admin only; the page is `admin-crm-audit.html`). **Erasing a person:** deleting a contact that has CRM notes, tasks, files or meetings asks a CRM Admin to confirm and then erases them together (files from disk too); the audit log keeps counts only. **`stderr.log`:** database error messages can include an email address; the file is not cleaned by the app, so clear it now and then (cPanel File Manager, or `: > /home/fixernat/repositories/fixernation/server/stderr.log` after a restart).
@@ -86,6 +88,7 @@ Rolling back never drops a table. Code goes back with `git revert` of that phase
 - **Not a duplicate (F3):** undo each pair from the list at the bottom of Accounts > Possible duplicates.
 - **Look-alike names (F4):** read only, no switch and no cron job; suggestions only. To change what counts as alike, change `lib/crm-name-match.js` (and its tests).
 - **My checklist steps (F2) and the picker fix (F1):** read only; revert the commit if needed.
+- **Hand-set account Customer (F13):** a CRM Admin marks or releases it on the account page; release is the undo. No switch and no cron job. Marking changes no purchase. Before the alter script has run the button says it is not available yet.
 - **Quote #307785 customers (F12):** `node scripts/mark-quote-people-customers.js 307785` is a dry run that lists who it would mark and changes nothing; add `--apply --as <your admin username>` to mark them. Undo one person by releasing the hand-set label on their contact page (CRM Admin). It never touches the purchase, seats or licenses.
 - **Phase 7 (Reports):** revert its commit. No data was added.
 - **Phase 6 (renewals, engagement, attribution):** set `crm_renewal_generator` to anything but `true` to stop new renewal deals. Deals it already made stay; close or delete them by hand.

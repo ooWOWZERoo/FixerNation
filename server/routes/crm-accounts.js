@@ -76,7 +76,7 @@ router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
     [...params, size, offset]
   );
   const paidBy = await roll.purchaseTotals(pool, rows.map(a => a.id)); // G17: paid, non-trial purchases placed on each account (a district includes its schools)
-  const view = (a) => { const r = relMap.get(Number(a.id)); return r ? { relationship: r.relationship, needsReview: r.needsReview } : { relationship: null, needsReview: false }; };
+  const view = (a) => { const r = relMap.get(Number(a.id)); return r ? { relationship: r.relationship, needsReview: r.needsReview, handSet: !!r.handSet } : { relationship: null, needsReview: false, handSet: false }; };
   res.json({ accounts: rows.map(a => ({ ...accountRow(a), ...view(a), contactCount: Number(a.contact_count), openDeals: Number(a.open_deals), paid: paidBy.get(Number(a.id)) || { count: 0, totalCents: 0, firstAt: null, lastAt: null } })), total: Number(total), page, pageSize: size, relationshipCounts: rel.relationshipCounts(relMap) });
 });
 
@@ -135,6 +135,14 @@ router.get('/:id/engagement', requireAuth, requireCrm('view'), async (req, res) 
   res.json(out);
 });
 
+// Follow-up F13: who set the hand-set Customer label on this account, why, and on what evidence. Null when there is none (or the columns are not there yet).
+async function handSetDetail(a) {
+  if (a.label_override !== 'customer') return null;
+  let by = null;
+  if (a.label_override_by_admin_id) { const [[u]] = await pool.query('SELECT username FROM admin_users WHERE id = ?', [a.label_override_by_admin_id]); by = u ? u.username : null; }
+  return { reason: a.label_override_reason || '', evidence: a.label_override_evidence || '', by, at: a.label_override_at || null };
+}
+
 router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
   const id = posInt(req.params.id);
   const [[a]] = id ? await pool.query('SELECT * FROM crm_accounts WHERE id = ?', [id]) : [[null]];
@@ -153,7 +161,8 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
   const possibleDuplicates = a.archived_at ? [] : ND.keepSuspected(a.id, await roll.duplicatesOf(pool, a), (await ND.dismissedPairs(pool)).set);
   res.json({
     rollup, possibleDuplicates,
-    account: { ...accountRow(a), relationship: relation ? relation.relationship : null, needsReview: relation ? relation.needsReview : false, relationshipWhy: relation ? relation.why : null },
+    account: { ...accountRow(a), relationship: relation ? relation.relationship : null, needsReview: relation ? relation.needsReview : false, relationshipWhy: relation ? relation.why : null, handSetCustomer: relation ? !!relation.handSet : false },
+    customerOverride: await handSetDetail(a),
     contacts: contacts.map(c => ({ contactId: c.contact_id, name: c.name, email: c.email, classification: c.crm_classification, title: c.title, startedOn: c.started_on || null, endedOn: c.ended_on || null, isPrimary: !!c.is_primary, isChampion: !!c.is_champion, isDecisionMaker: !!c.is_decision_maker, isProcurement: !!c.is_procurement, isFinance: !!c.is_finance })),
     opportunities: opps.map(o => ({ id: o.id, name: o.name, state: o.state, stage: o.stage, oppType: o.opp_type, amountCents: o.amount_cents === null ? null : Number(o.amount_cents), ownerAdminId: o.owner_admin_id || null, nextStep: o.next_step, nextStepDueAt: o.next_step_due_at })),
     children,
@@ -227,6 +236,42 @@ router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
 });
 
 // Archive and restore: CRM Admin only (the matrix groups it with merge). An account with open deals cannot be archived.
+// Follow-up F13: a CRM Admin marks an account a Customer by hand. Like the hand-set label on a person it needs a reason AND the evidence (for example "paid by PO 4471, received 11 Nov"), is audited,
+// and can be released. It writes only these five columns on the account: no purchase, invoice, license or seat is touched, and the rule that decides Customers for people and reports is unchanged.
+const NOT_AVAILABLE = { code: 'not_available', error: 'This is not available yet. Ask the person who runs the site to run the account-label update.' };
+router.post('/:id/customer-override', requireAuth, requireCrm('set_customer'), async (req, res) => {
+  const id = posInt(req.params.id);
+  const [[a]] = id ? await pool.query('SELECT * FROM crm_accounts WHERE id = ?', [id]) : [[null]];
+  if (!a) return res.status(404).json({ error: 'Account not found' });
+  if (a.archived_at) return res.status(409).json({ code: 'archived', error: 'This account is archived. Restore it first.' });
+  if (!Object.prototype.hasOwnProperty.call(a, 'label_override')) return res.status(503).json(NOT_AVAILABLE);
+  const b = req.body || {};
+  const reason = text(b.reason, 120), evidence = text(b.evidence, 120);
+  if (!reason || !evidence) return res.status(400).json({ code: 'evidence_required', error: 'A reason and the evidence (for example "paid by PO 4471, received 11 Nov") are both required.' });
+  const relation = (await rel.accountRelationships(pool)).get(Number(a.id));
+  if (a.label_override === 'customer') return res.status(409).json({ code: 'already_set', error: 'This account is already marked a Customer by hand.' });
+  if (relation && relation.relationship === 'customer') return res.status(409).json({ code: 'already_customer', error: 'A paid purchase already makes this a Customer, so there is nothing to set.' });
+  const [u] = await pool.query("UPDATE crm_accounts SET label_override = 'customer', label_override_reason = ?, label_override_evidence = ?, label_override_by_admin_id = ?, label_override_at = ? WHERE id = ? AND label_override IS NULL",
+    [reason, evidence, req.crm.adminId, new Date().toISOString().slice(0, 19).replace('T', ' '), id]);
+  if (!u.affectedRows) return res.status(409).json({ code: 'already_set', error: 'This account was just marked a Customer by someone else.' });
+  await crmAudit(req, { action: 'crm_account_customer_override', entityType: 'crm_account', entityId: id, prev: { relationship: relation ? relation.relationship : null }, next: { relationship: 'customer', handSet: true }, reason: `${reason}; evidence: ${evidence}` });
+  res.json({ ok: true, relationship: 'customer', handSet: true });
+});
+
+router.post('/:id/release-customer-override', requireAuth, requireCrm('set_customer'), async (req, res) => {
+  const id = posInt(req.params.id);
+  const [[a]] = id ? await pool.query('SELECT * FROM crm_accounts WHERE id = ?', [id]) : [[null]];
+  if (!a) return res.status(404).json({ error: 'Account not found' });
+  if (!Object.prototype.hasOwnProperty.call(a, 'label_override')) return res.status(503).json(NOT_AVAILABLE);
+  const reason = text((req.body || {}).reason, 255);
+  if (!reason) return res.status(400).json({ code: 'reason_required', error: 'A reason is required.' });
+  if (a.label_override !== 'customer') return res.status(409).json({ code: 'not_set', error: 'This account is not marked a Customer by hand.' });
+  await pool.query("UPDATE crm_accounts SET label_override = NULL, label_override_reason = NULL, label_override_evidence = NULL, label_override_by_admin_id = NULL, label_override_at = NULL WHERE id = ? AND label_override = 'customer'", [id]);
+  await crmAudit(req, { action: 'crm_account_customer_released', entityType: 'crm_account', entityId: id, prev: { handSet: true, reason: a.label_override_reason, evidence: a.label_override_evidence }, next: { handSet: false }, reason });
+  const relation = (await rel.accountRelationships(pool)).get(Number(a.id));
+  res.json({ ok: true, relationship: relation ? relation.relationship : null });
+});
+
 router.post('/:id/archive', requireAuth, requireCrm('merge'), async (req, res) => {
   const id = posInt(req.params.id);
   const [[a]] = id ? await pool.query('SELECT id, archived_at FROM crm_accounts WHERE id = ?', [id]) : [[null]];

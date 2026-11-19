@@ -8,6 +8,10 @@
 //  Needs review  separate from the label: a person on the account owns a paid, non-trial purchase that names no school, so it cannot be placed (D4's "unresolved, needs review").
 //                Not shown for an account that is already a Customer. The CRM never edits a purchase; staff fix the school in the old admin tool and the flag clears itself.
 //
+// Hand-set Customer (follow-up F13): a CRM Admin can mark an account a Customer by hand, with a reason and the evidence (the same idea as the hand-set label on a person). It is stored on
+// the account (label_override), is shown as "set by hand" wherever the label shows, counts in the same totals as a purchase-based Customer, and can be released. It never touches a purchase,
+// and the one Customer rule for PEOPLE and for reports is unchanged. An install without the columns yet simply has none.
+//
 // Test addresses (@example.com) are left out everywhere. Every function reads only; `conn` is the pool in the routes and any handle in tests. SQL stays portable.
 const cls = require('./crm-classification');
 const { DEAL_REAL_SQL } = require('./crm-reports');
@@ -16,13 +20,25 @@ const NOT_TEST_BUYER = "LOWER(TRIM(c.email)) NOT LIKE '%@example.com'";
 const LABELS = ['suspect', 'prospect', 'customer'];
 
 // Accounts with a paid, non-trial purchase placed on them, by school or through the district's schools.
-async function customerAccountIds(conn) {
+async function customerAccountIds(conn, { includeHandSet = true } = {}) {
   const [rows] = await conn.query(
     `SELECT a.id FROM crm_accounts a WHERE a.archived_at IS NULL AND EXISTS (
        SELECT 1 ${cls.PURCHASES_FROM} JOIN newsletter_contacts c ON c.id = p.contact_id
        WHERE ${cls.QUALIFYING_SQL} AND ${NOT_TEST_BUYER}
          AND (p.school_id = a.school_id OR p.school_id IN (SELECT sc.id FROM schools sc WHERE sc.district_id = a.district_id)))`);
-  return new Set(rows.map(r => Number(r.id)));
+  const ids = new Set(rows.map(r => Number(r.id)));
+  if (includeHandSet) for (const [id] of await handSetCustomers(conn)) ids.add(id);
+  return ids;
+}
+
+// { account id -> { reason, evidence } } for live accounts a CRM Admin marked Customer by hand. Empty when the columns are not there yet.
+async function handSetCustomers(conn) {
+  const out = new Map();
+  try {
+    const [rows] = await conn.query("SELECT id, label_override_reason AS reason, label_override_evidence AS evidence FROM crm_accounts WHERE archived_at IS NULL AND label_override = 'customer'");
+    for (const r of rows) out.set(Number(r.id), { reason: r.reason || '', evidence: r.evidence || '' });
+  } catch (err) { if (!(err && (err.code === 'ER_BAD_FIELD_ERROR' || /no such column|has no column named/i.test(String(err.message))))) throw err; }
+  return out;
 }
 
 // Paid, non-trial, non-test purchases that name no school (so they cannot be placed), each with the accounts its buyer belongs to.
@@ -48,7 +64,8 @@ async function unplacedPurchases(conn) {
 // { id -> { relationship, needsReview, why } } for every live account.
 async function accountRelationships(conn, today = new Date().toISOString().slice(0, 10)) {
   const [accounts] = await conn.query('SELECT id, account_type FROM crm_accounts WHERE archived_at IS NULL');
-  const customers = await customerAccountIds(conn);
+  const customers = await customerAccountIds(conn, { includeHandSet: false });
+  const handSet = await handSetCustomers(conn);
   const [open] = await conn.query(`SELECT DISTINCT o.account_id AS id FROM crm_opportunities o WHERE o.state = 'open' AND ${DEAL_REAL_SQL}`);
   const openDeal = new Set(open.map(r => Number(r.id)));
   const [people] = await conn.query(
@@ -63,20 +80,21 @@ async function accountRelationships(conn, today = new Date().toISOString().slice
     const id = Number(a.id), kind = a.account_type === 'district' ? 'district' : 'school';
     let relationship, why;
     if (customers.has(id)) { relationship = 'customer'; why = `A paid, non-trial purchase is placed on this ${kind}.`; }
+    else if (handSet.has(id)) { relationship = 'customer'; why = `Set by hand by a CRM Admin: ${handSet.get(id).reason || 'no reason recorded'}. No paid purchase is placed on this ${kind}, so release it if that is wrong.`; }
     else if (openDeal.has(id)) { relationship = 'prospect'; why = 'It has an open deal.'; }
     else if (withProspectPerson.has(id)) { relationship = 'prospect'; why = 'A person on this account is a Prospect or a Customer.'; }
     else { relationship = 'suspect'; why = 'No open deal, and nobody on this account has shown buying interest yet.'; }
     const needsReview = relationship !== 'customer' && review.has(id);
     if (needsReview) why += ' A person here also owns a paid purchase that names no school, so it cannot be placed on any account. It is listed on the Accounts page.';
-    out.set(id, { relationship, needsReview, why });
+    out.set(id, { relationship, needsReview, why, handSet: handSet.has(id) });
   }
   return out;
 }
 
 function relationshipCounts(map) {
-  const c = { suspect: 0, prospect: 0, customer: 0, review: 0 };
-  for (const v of map.values()) { c[v.relationship]++; if (v.needsReview) c.review++; }
+  const c = { suspect: 0, prospect: 0, customer: 0, review: 0, handSet: 0 };
+  for (const v of map.values()) { c[v.relationship]++; if (v.needsReview) c.review++; if (v.handSet) c.handSet++; }
   return c;
 }
 
-module.exports = { LABELS, customerAccountIds, unplacedPurchases, accountRelationships, relationshipCounts };
+module.exports = { LABELS, handSetCustomers, customerAccountIds, unplacedPurchases, accountRelationships, relationshipCounts };

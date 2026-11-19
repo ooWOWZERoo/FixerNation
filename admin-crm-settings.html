@@ -108,7 +108,7 @@
         '<ul class="crm-list" aria-label="People by label">' + num(ct.contacts.suspect, lk.suspects, 'Suspects') + num(ct.contacts.prospect, lk.prospects, 'Prospects') + num(ct.contacts.customer, lk.customers, 'Customers') +
         num(ct.contacts.handSet, lk.handSet, 'Customers set by hand (locked, never changed by the nightly check)') + num(ct.contacts.purchasesToConfirm, lk.purchasesToConfirm, 'Paid purchases with no amount, waiting for a person to confirm') + num(ct.contacts.customersWithoutQualifyingPurchase, lk.reconciliation, 'Customers with no qualifying purchase left (see Reconciliation)') + '</ul>' +
         '<h3 class="crm-small" style="margin:16px 0 6px;">Schools and districts</h3>' + ruleList(rl.accounts) +
-        (ct.accounts ? '<ul class="crm-list" aria-label="Accounts by label">' + num(ct.accounts.customer, lk.accountCustomers, 'Customers') + num(ct.accounts.prospect, lk.accountProspects, 'Prospects') + num(ct.accounts.suspect, lk.accountSuspects, 'Suspects') + num(ct.accounts.needsReview, lk.accountsNeedReview, 'Needing review') + '</ul>' : '<p class="crm-small crm-muted">Account counts are not available on this server yet.</p>') + '</div>';
+        (ct.accounts ? '<ul class="crm-list" aria-label="Accounts by label">' + num(ct.accounts.customer, lk.accountCustomers, 'Customers') + num(ct.accounts.handSet, lk.accountCustomers, 'Customers set by hand (included in the line above)') + num(ct.accounts.prospect, lk.accountProspects, 'Prospects') + num(ct.accounts.suspect, lk.accountSuspects, 'Suspects') + num(ct.accounts.needsReview, lk.accountsNeedReview, 'Needing review') + '</ul>' : '<p class="crm-small crm-muted">Account counts are not available on this server yet.</p>') + '</div>';
     }
     root.innerHTML = h;
 

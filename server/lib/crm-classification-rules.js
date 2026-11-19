@@ -19,7 +19,7 @@ const RULES = {
     { label: 'Moving', text: 'A label only moves forward on its own. If a Customer’s purchase later stops qualifying (a refund, for example), the label is left as it is and the person is flagged for review. A label set by hand is never changed by the nightly check.' },
   ],
   accounts: [
-    { label: 'Customer', text: 'A paid, non-trial purchase is placed on the school, or on a school in the district.' },
+    { label: 'Customer', text: 'A paid, non-trial purchase is placed on the school, or on a school in the district, or a CRM Admin set it by hand with a reason and the evidence (it shows as "set by hand" and can be released).' },
     { label: 'Prospect', text: 'Not a Customer, and it has an open deal, or a person there is a Prospect or a Customer. A lost or set-aside deal alone does not count.' },
     { label: 'Suspect', text: 'Anything else.' },
     { label: 'Needs review', text: 'Separate from the label: someone there owns a paid purchase that names no school, so it cannot be placed on any account. It clears when the school is set on the purchase.' },
@@ -40,7 +40,7 @@ async function overview(conn, today) {
     rules: RULES,
     counts: {
       contacts: { ...contacts, handSet, purchasesToConfirm: toConfirm, customersWithoutQualifyingPurchase: unexplained },
-      accounts: accounts ? { suspect: accounts.suspect, prospect: accounts.prospect, customer: accounts.customer, needsReview: accounts.review } : null,
+      accounts: accounts ? { suspect: accounts.suspect, prospect: accounts.prospect, customer: accounts.customer, needsReview: accounts.review, handSet: accounts.handSet } : null,
     },
     links: {
       suspects: 'admin-crm-contacts.html?classification=suspect', prospects: 'admin-crm-contacts.html?classification=prospect', customers: 'admin-crm-contacts.html?classification=customer',

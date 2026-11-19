@@ -46,7 +46,7 @@
   var REL = { suspect: ['Suspect', 'a-pill-neutral'], prospect: ['Prospect', 'a-pill-warning'], customer: ['Customer', 'a-pill-success'] };
   function relPills(a) {
     var r = REL[a.relationship];
-    return (r ? '<span class="a-pill ' + r[1] + '">' + r[0] + '</span>' : '') + (a.needsReview ? ' <span class="a-pill a-pill-danger" title="A person on this account owns a paid purchase that names no school.">Needs review</span>' : '');
+    return (r ? '<span class="a-pill ' + r[1] + '"' + (a.handSet ? ' title="A CRM Admin marked this account a Customer by hand."' : '') + '>' + r[0] + (a.handSet ? ' (by hand)' : '') + '</span>' : '') + (a.needsReview ? ' <span class="a-pill a-pill-danger" title="A person on this account owns a paid purchase that names no school.">Needs review</span>' : '');
   }
 
   C.boot(root).then(function (me) {

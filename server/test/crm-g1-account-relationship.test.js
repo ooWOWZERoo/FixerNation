@@ -65,7 +65,7 @@ test('NEEDS REVIEW: a person on the account owns a paid purchase that names no s
   assert.equal(m.get(A.unresolved).needsReview, true); assert.match(m.get(A.unresolved).why, /names no school/);
   assert.equal(m.get(A.customerWithUnplaced).relationship, 'customer'); assert.equal(m.get(A.customerWithUnplaced).needsReview, false, 'already a Customer');
   assert.equal([...m.values()].filter(v => v.needsReview).length, 1);
-  assert.deepEqual(rel.relationshipCounts(m), { suspect: 5, prospect: 3, customer: 3, review: 1 });
+  assert.deepEqual(rel.relationshipCounts(m), { suspect: 5, prospect: 3, customer: 3, review: 1, handSet: 0 });
 });
 
 test('THE LIST: filters by label and by needs-review, counts every label, attaches the label to each row, and treats a bad filter as no filter', async () => {
@@ -75,7 +75,7 @@ test('THE LIST: filters by label and by needs-review, counts every label, attach
   assert.deepEqual(await names('relationship=review'), ['Unresolved school']);
   assert.equal((await list('relationship=bogus')).total, 11, 'a bad value is ignored');
   const all = await list();
-  assert.deepEqual(all.relationshipCounts, { suspect: 5, prospect: 3, customer: 3, review: 1 });
+  assert.deepEqual(all.relationshipCounts, { suspect: 5, prospect: 3, customer: 3, review: 1, handSet: 0 });
   const row = all.accounts.find(a => a.name === 'Unresolved school');
   assert.deepEqual([row.relationship, row.needsReview], ['prospect', true]);
   assert.equal((await list('relationship=customer&type=district')).total, 1, 'it combines with the other filters');
