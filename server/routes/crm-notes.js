@@ -14,7 +14,8 @@ const CH = require('../lib/crm-contact-history'); // G16: a logged call, email o
 const router = express.Router();
 const KINDS = ['note', 'call', 'email', 'meeting'];
 const isMissing = (err) => err && (err.code === 'ER_BAD_FIELD_ERROR' || err.code === 'ER_NO_SUCH_TABLE' || /no such (table|column)|has no column named/i.test(String(err.message)));
-const MAX_BODY = 5000;
+// How long a note may be: 10000 characters, doubled from 5000 on 2026-11-23. The body columns are TEXT (about 65,000 bytes), so nothing in the database changes. Keep the two page inputs in crm-panels.js the same.
+const MAX_BODY = 10000;
 
 const NOTE_SELECT = `SELECT n.*, ${S.SUBJECT_COLS}, au.username AS author_name
   FROM crm_notes n ${S.SUBJECT_JOIN('n')} LEFT JOIN admin_users au ON au.id = n.created_by_admin_id`;

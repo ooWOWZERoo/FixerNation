@@ -123,7 +123,7 @@
     function draw() {
       var h = '';
       if (s.canWrite) {
-        h += '<form id="noteForm" novalidate><div class="a-field"><label for="noteBody">Add a note</label><textarea id="noteBody" maxlength="5000" placeholder="What happened, or what did you learn?"></textarea></div>' +
+        h += '<form id="noteForm" novalidate><div class="a-field"><label for="noteBody">Add a note</label><textarea id="noteBody" maxlength="10000" placeholder="What happened, or what did you learn?"></textarea></div>' +
           '<div class="crm-row-actions"><label class="crm-sr" for="noteKind">Kind of note</label><select id="noteKind" class="a-filter-select">' + C.options(KINDS, 'note') + '</select><button type="submit" class="a-btn a-btn-primary a-btn-sm">Save the note</button></div><p class="crm-inline-error" role="alert" id="noteErr" hidden></p></form>';
       }
       h += notes.length ? '<ul class="crm-list" aria-label="Notes">' + notes.map(function (n) {
@@ -143,7 +143,7 @@
       on(el, '#moreNotes', function () { page++; load(true); });
       each(el, '[data-act=edit]', function (b) {
         var n = byId[b.getAttribute('data-id')];
-        C.dialog({ title: 'Edit the note', submit: 'Save', body: C.field('Note', '<textarea id="enBody" maxlength="5000" required>' + esc(n.body) + '</textarea>', '', 'enBody') + C.field('Kind', '<select id="enKind">' + C.options(KINDS, n.kind) + '</select>', '', 'enKind'),
+        C.dialog({ title: 'Edit the note', submit: 'Save', body: C.field('Note', '<textarea id="enBody" maxlength="10000" required>' + esc(n.body) + '</textarea>', '', 'enBody') + C.field('Kind', '<select id="enKind">' + C.options(KINDS, n.kind) + '</select>', '', 'enKind'),
           onSubmit: function (f) { return api('PUT', '/api/crm/notes/' + n.id, { body: f.querySelector('#enBody').value, kind: f.querySelector('#enKind').value }).then(function (r) { if (r.ok) { C.toast('Saved'); load(); return; } return problem(r); }); } });
       });
       // G14: a CRM Admin can read what a note said before each edit. Every old text is escaped; opening this is written to the audit log.
