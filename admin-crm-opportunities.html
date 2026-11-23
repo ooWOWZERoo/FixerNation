@@ -46,7 +46,6 @@
     ['My opportunities', { owner: 'me' }],
     ['Open procurement', { stage: 'procurement' }],
     ['Stale quotes', { stage: 'proposal_sent', staleDays: '14' }],
-    ['Pennsylvania districts', { accountType: 'district', accountState: 'PA' }],
     ['Trials ending soon', { trialEndsInDays: '14' }],
     ['Expected this quarter', { closeIn: 'quarter' }],
     ['Renewals', { oppType: 'renewal' }],
@@ -58,12 +57,14 @@
   ];
   // What the newer views mean, shown under the list of views while one of them is open.
   var VIEW_HELP = {
-    'Pennsylvania districts': 'Open deals on district accounts whose State is Pennsylvania (PA). A district account with no State filled in is not listed: set it on the account page.',
     'Trials ending soon': 'Open deals with a trial that ends in the next 14 days, found through the deal\u2019s quotes or the account\u2019s school.',
     'Expected this quarter': 'Open deals whose expected close date falls in the current calendar quarter.',
     'Renewals': 'Open deals of the Renewal type, including the ones the renewal generator opens.',
     'Unpaid won deals': 'Won deals where none of the deal\u2019s quotes has a paid purchase yet (no purchase, or a purchase order still waiting).'
   };
+  // The organization's State, matched by the server against the code or the full name (PA or Pennsylvania). Any state can be picked; nothing is hard-coded to one.
+  var ACCOUNT_STATES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming' };
+  var ACCOUNT_TYPES = { district: 'Districts', school: 'Schools' };
   var STATE_OPTS = { open: 'Open', won: 'Won', lost: 'Lost', inactive: 'Inactive', all: 'Every state' };
 
   C.boot(root).then(function (me) {
@@ -95,12 +96,16 @@
       '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search deals</label><input type="search" id="fQ" placeholder="Search by deal or organization" value="' + esc(st.q) + '"></div>' +
       '<label class="crm-sr" for="fStage">Stage</label><select id="fStage" class="a-filter-select"><option value="">Every stage</option>' + stages.map(function (s) { return '<option value="' + esc(s.key) + '"' + (s.key === st.stage ? ' selected' : '') + '>' + esc(s.label) + '</option>'; }).join('') + '</select>' +
       '<label class="crm-sr" for="fOwner">Owner</label><select id="fOwner" class="a-filter-select"><option value="">Every owner</option><option value="me"' + (st.owner === 'me' ? ' selected' : '') + '>Me</option><option value="none"' + (st.owner === 'none' ? ' selected' : '') + '>Nobody yet</option>' + staff.map(function (s) { return '<option value="' + esc(s.id) + '"' + (String(s.id) === st.owner ? ' selected' : '') + '>' + esc(s.username) + '</option>'; }).join('') + '</select>' +
-      (st.view === 'table' ? '<label class="crm-sr" for="fState">State</label><select id="fState" class="a-filter-select">' + C.options(STATE_OPTS, st.state) + '</select>' : '') + '</div>' +
+      '<label class="crm-sr" for="fAcctType">Organization type</label><select id="fAcctType" class="a-filter-select">' + C.options(ACCOUNT_TYPES, st.accountType, 'Schools and districts') + '</select>' +
+      '<label class="crm-sr" for="fAcctState">Organization state</label><select id="fAcctState" class="a-filter-select">' + C.options(ACCOUNT_STATES, st.accountState, 'Every state') + '</select>' +
+      (st.view === 'table' ? '<label class="crm-sr" for="fState">Deal status</label><select id="fState" class="a-filter-select">' + C.options(STATE_OPTS, st.state) + '</select>' : '') + '</div>' +
       '<div id="oSummary" class="crm-small crm-muted" style="margin-bottom:12px;" aria-live="polite"></div><div id="oBody" aria-live="polite"></div><div id="oPager"></div></div>';
     var go = C.debounce(function () { st.page = 1; fetchList(); }, 250);
     document.getElementById('fQ').addEventListener('input', function (e) { st.q = e.target.value; go(); });
     document.getElementById('fStage').addEventListener('change', function (e) { st.stage = e.target.value; st.page = 1; fetchList(); });
     document.getElementById('fOwner').addEventListener('change', function (e) { st.owner = e.target.value; st.page = 1; fetchList(); });
+    document.getElementById('fAcctType').addEventListener('change', function (e) { st.accountType = e.target.value; st.page = 1; fetchList(); });
+    document.getElementById('fAcctState').addEventListener('change', function (e) { st.accountState = e.target.value; st.page = 1; fetchList(); });
     var fs = document.getElementById('fState'); if (fs) fs.addEventListener('change', function (e) { st.state = e.target.value; st.page = 1; fetchList(); });
     root.querySelectorAll('[data-view]').forEach(function (b) { b.addEventListener('click', function () { st.view = b.getAttribute('data-view'); st.page = 1; if (st.view === 'board') st.state = 'open'; shell(); fetchList(); }); });
     var ad = document.getElementById('addDeal'); if (ad) ad.addEventListener('click', function () { C.newDealDialog({}); });

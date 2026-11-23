@@ -105,13 +105,17 @@ test('TRIALS ENDING SOON: open deals with a live trial ending inside the window,
 
 test('THE PAGE: every view is listed under its name, each one\'s filters are read back from the address and sent to the server, the active one explains itself, and the script parses', () => {
   const page = fs.readFileSync(path.join(env.SERVER, '..', 'admin-crm-opportunities.html'), 'utf8');
-  for (const name of ['My opportunities', 'Pennsylvania districts', 'Open procurement', 'Stale quotes', 'Trials ending soon', 'Expected this quarter', 'Unpaid won deals', 'Renewals']) {
+  for (const name of ['My opportunities', 'Open procurement', 'Stale quotes', 'Trials ending soon', 'Expected this quarter', 'Unpaid won deals', 'Renewals']) {
     assert.ok(page.includes(`['${name}',`), `${name} is a saved view`);
   }
   for (const k of ['oppType', 'accountType', 'accountState', 'closeIn', 'unpaid', 'trialEndsInDays']) {
     assert.match(page, new RegExp(`${k}: q\\.${k}`), `${k} is read from the address`);
     assert.match(page, new RegExp(`'${k}'`), `${k} is part of what makes a view the active one`);
   }
+  assert.ok(!page.includes('Pennsylvania districts'), 'no state is hard-coded as a saved view');
+  assert.match(page, /id="fAcctState"/, 'any state can be picked from the toolbar');
+  assert.match(page, /id="fAcctType"/, 'districts or schools can be picked from the toolbar');
+  for (const code of ['PA', 'OH', 'NY', 'DC', 'WY']) assert.match(page, new RegExp(`\\b${code}: '`), `${code} is in the state list`);
   assert.match(page, /req\.today = C\.todayLocal\(\)/, 'the quarter is the person\'s own day');
   assert.match(page, /VIEW_HELP/);
   assert.doesNotThrow(() => new (require('node:vm').Script)([...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].pop()[1]));
