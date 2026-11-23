@@ -188,7 +188,7 @@ test('FILES AND PAGES: schema, alter script, cron line and panels agree; mail go
   assert.doesNotMatch(read('lib/crm-task-reminders.js').replace(/\/\/.*$/gm, ''), /newsletter_contacts\s+(c\s+)?WHERE[^;]*email|quote_requests|campaign_sends|SELECT[^;`]*\bemail\b[^;`]*FROM (newsletter_contacts|quote_requests)/i, 'no customer address is read');
   const panels = read('../crm-panels.js'), tasks = read('../admin-crm-tasks.html');
   for (const src of [panels, tasks]) { assert.match(src, /id="tRemindAt"/); assert.match(src, /remindTz/); }
-  for (const f of ['account', 'contact', 'opportunity']) assert.match(read(`../admin-crm-${f}.html`), /crm-panels\.js\?v=4/);
+  for (const f of ['account', 'contact', 'opportunity']) assert.match(read(`../admin-crm-${f}.html`), /crm-panels\.js\?v=5/);
   for (const f of ['lib/crm-task-reminders.js', 'lib/crm-task-fields.js', 'routes/crm-tasks.js', 'lib/mailer.js', 'scripts/crm-task-reminders.js', 'scripts/alter-add-crm-task-reminder-time.js']) require('node:child_process').execFileSync(process.execPath, ['--check', path.join(env.SERVER, f)]);
   new (require('node:vm').Script)(panels);
   for (const s of [...tasks.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(x => x.trim())) assert.doesNotThrow(() => new (require('node:vm').Script)(s));

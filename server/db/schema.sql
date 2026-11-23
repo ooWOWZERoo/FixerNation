@@ -2127,8 +2127,8 @@ CREATE TABLE IF NOT EXISTS crm_tasks (
     opportunity_id INT UNSIGNED NULL,
     account_id INT UNSIGNED NULL,
     contact_id INT UNSIGNED NULL,
-    title VARCHAR(255) NOT NULL,
-    details VARCHAR(1000) NULL,
+    title VARCHAR(510) NOT NULL, -- widened from 255 (scripts/alter-widen-crm-task-text.js)
+    details VARCHAR(2000) NULL, -- widened from 1000
     due_on DATE NULL,
     state VARCHAR(8) NOT NULL DEFAULT 'open',
     assigned_admin_id INT UNSIGNED NULL,

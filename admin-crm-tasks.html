@@ -176,8 +176,8 @@
     var dlg = C.dialog({
       title: 'Add a task', submit: 'Add the task',
       body: C.field('What is it about?', '<select id="tKind">' + C.options(KINDS, 'opportunities') + '</select>', '', 'tKind') + '<div id="pickArea"></div>' +
-        C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="255" required>', '', 'tTitle') +
-        C.field('Details (optional)', '<textarea id="tDetails" maxlength="1000"></textarea>', '', 'tDetails') +
+        C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="510" required>', '', 'tTitle') +
+        C.field('Details (optional)', '<textarea id="tDetails" maxlength="2000"></textarea>', '', 'tDetails') +
         '<div class="a-form-row">' + C.field('Due', '<input type="date" id="tDue">', '', 'tDue') + C.field('For', '<select id="tWho">' + C.ownerOptions(staff, C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>' +
         '<div class="a-form-row">' + C.field('Priority', '<select id="tPrio"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select>', '', 'tPrio') + C.field('Remind me on (optional)', '<input type="date" id="tRemind">', 'Not after the due day.', 'tRemind') + '</div>' +
         C.field('At what time? (optional)', '<input type="time" id="tRemindAt">', 'Needs a reminder date. Once the owner has switched reminder emails on, you get one email at this time (' + esc(browserZone() || 'your time zone').replace(/_/g, ' ') + ').', 'tRemindAt'),

@@ -9,6 +9,9 @@ const { requireCrm } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const { sqlNow } = require('../lib/crm-classification');
 const { text, posInt, dateOnly, oneOf, paging } = require('../lib/crm-common');
+// How long a task's title and details may be. The crm_tasks columns are this wide (scripts/alter-widen-crm-task-text.js); doubled from 255 and 1000 on 2026-11-23. Keep the two page inputs (crm-panels.js, admin-crm-tasks.html) the same.
+const TASK_TITLE_MAX = 510;
+const TASK_DETAILS_MAX = 2000;
 const S = require('../lib/crm-subjects');
 const TF = require('../lib/crm-task-fields'); // G14: priority, source, reminder, quote link
 
@@ -134,7 +137,7 @@ router.post('/', requireAuth, requireCrm('write'), async (req, res) => {
   const r = await S.resolveSubject(b);
   if (r.error) return res.status(r.status).json({ error: r.error });
   if (!S.canWriteResolved(req, r.subject)) return res.status(403).json({ code: 'not_your_deal', error: 'This deal belongs to someone else. Ask the owner or a CRM Admin.' });
-  const title = text(b.title, 255);
+  const title = text(b.title, TASK_TITLE_MAX);
   if (!title) return res.status(400).json({ error: 'Say what needs doing.' });
   let dueOn = null;
   if (b.dueOn !== undefined && b.dueOn !== null && b.dueOn !== '') { dueOn = dateOnly(b.dueOn); if (!dueOn) return res.status(400).json({ error: 'The due date must be a real date (YYYY-MM-DD).' }); }
@@ -148,7 +151,7 @@ router.post('/', requireAuth, requireCrm('write'), async (req, res) => {
     return pool.query(
       `INSERT INTO crm_tasks (opportunity_id, account_id, contact_id, title, details, due_on, state, assigned_admin_id, created_by_admin_id, created_at${xcols.map(k => `, ${k}`).join('')})
        VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?${xcols.map(() => ', ?').join('')})`,
-      [c.opportunity_id, c.account_id, c.contact_id, title, text(b.details, 1000), dueOn, assignee, req.crm.adminId, sqlNow(), ...xcols.map(k => fields[k])]);
+      [c.opportunity_id, c.account_id, c.contact_id, title, text(b.details, TASK_DETAILS_MAX), dueOn, assignee, req.crm.adminId, sqlNow(), ...xcols.map(k => fields[k])]);
   };
   // The screens always send priority and a reminder. Before the alter scripts have run those columns are not there, and the task must still save: first without the time of day (the newest
   // columns), then without any of the extras.
@@ -168,8 +171,8 @@ router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
   if (!S.canWriteRow(req, t)) return res.status(403).json({ code: 'not_your_deal', error: 'This task is on a deal that belongs to someone else.' });
   const b = req.body || {};
   let f = {};
-  if (b.title !== undefined) { f.title = text(b.title, 255); if (!f.title) return res.status(400).json({ error: 'Say what needs doing.' }); }
-  if (b.details !== undefined) f.details = text(b.details, 1000);
+  if (b.title !== undefined) { f.title = text(b.title, TASK_TITLE_MAX); if (!f.title) return res.status(400).json({ error: 'Say what needs doing.' }); }
+  if (b.details !== undefined) f.details = text(b.details, TASK_DETAILS_MAX);
   if (b.dueOn !== undefined) {
     f.due_on = b.dueOn === null || b.dueOn === '' ? null : dateOnly(b.dueOn);
     if (b.dueOn !== null && b.dueOn !== '' && !f.due_on) return res.status(400).json({ error: 'The due date must be a real date (YYYY-MM-DD).' });

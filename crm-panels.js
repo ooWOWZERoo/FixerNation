@@ -84,8 +84,8 @@
     function form(t) {
       C.dialog({
         title: t ? 'Edit the task' : 'Add a task', submit: 'Save',
-        body: C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="255" required value="' + esc(t ? t.title : '') + '">', '', 'tTitle') +
-          C.field('Details (optional)', '<textarea id="tDetails" maxlength="1000">' + esc(t ? t.details || '' : '') + '</textarea>', '', 'tDetails') +
+        body: C.field('What needs doing?', '<input type="text" id="tTitle" maxlength="510" required value="' + esc(t ? t.title : '') + '">', '', 'tTitle') +
+          C.field('Details (optional)', '<textarea id="tDetails" maxlength="2000">' + esc(t ? t.details || '' : '') + '</textarea>', '', 'tDetails') +
           '<div class="a-form-row">' + C.field('Due', '<input type="date" id="tDue" value="' + esc(t && t.dueOn ? String(t.dueOn).slice(0, 10) : '') + '">', '', 'tDue') +
           C.field('For', '<select id="tWho">' + C.ownerOptions(staff, t ? t.assignedAdminId : C.adminId, 'Nobody') + '</select>', '', 'tWho') + '</div>' +
           '<div class="a-form-row">' + C.field('Priority', '<select id="tPrio">' + [['normal', 'Normal'], ['high', 'High'], ['low', 'Low']].map(function (o) { return '<option value="' + o[0] + '"' + ((t ? t.priority : 'normal') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>', '', 'tPrio') +
