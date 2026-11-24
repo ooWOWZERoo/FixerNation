@@ -68,6 +68,7 @@
 
   function draw() {
     var c = data.contact, cls = c.classification;
+    var addr = [c.street, [c.city, c.state].filter(Boolean).join(', '), c.zip].filter(Boolean).join(' · ');
     document.getElementById('pageTitle').textContent = c.name || c.email;
     document.title = 'Fixer Nation Education - ' + (c.name || c.email);
     var h = '<p><a class="crm-link" href="admin-crm-contacts.html">← All contacts</a></p>';
@@ -75,17 +76,20 @@
       (C.can('promote_prospect') && cls === 'suspect' ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="promote">Move to Prospect</button>' : '') +
       (C.can('set_customer') && cls !== 'customer' ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="override">Mark as Customer…</button>' : '') +
       (C.can('set_customer') && c.classificationLocked ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="release">Release the hand-set label</button>' : '') +
+      (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="editDetails">Edit details…</button>' : '') +
       (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="recheck">Check again</button>' : '') +
       (C.can('merge') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="mergeC">Merge into another…</button>' : '') +
       '</div></div><p class="crm-small crm-muted" style="margin:0 0 14px;">' + esc(C.classHelp(cls)) + '</p><dl class="crm-kv">' +
       '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' +
       '<dt>Company</dt><dd>' + (c.company ? esc(c.company) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Phone</dt><dd>' + (c.phone ? esc(c.phone) : '<span class="crm-muted">Not set</span>') + '</dd>' +
+      '<dt>Address</dt><dd>' + (addr ? esc(addr) : '<span class="crm-muted">Not set</span>') + '</dd>' +
       '<dt>State</dt><dd>' + (c.state ? esc(c.state) : '<span class="crm-muted">Not set</span>') + '</dd>' +
       '<dt>Owner</dt><dd>' + (C.can('write') ? '<label class="crm-sr" for="ownerSel">Owner</label><select id="ownerSel" class="a-filter-select">' + C.ownerOptions(staff, c.assignedAdminId, 'Nobody yet') + '</select>' : esc(C.staffName(staff, c.assignedAdminId) || 'Nobody yet')) + '</dd>' +
       '<dt>Last contacted</dt><dd>' + (c.lastContactedAt ? esc(C.date(c.lastContactedAt)) : '<span class="crm-muted">Never</span>') + '</dd>' +
       '<dt>Email list</dt><dd>' + esc(c.subscriptionStatus || '') + ' <span class="crm-small crm-muted">(a marketing choice, separate from the label above)</span></dd>' +
       '</dl>' +
-      (C.can('write') ? '<p class="crm-small" style="margin:14px 0 0;"><a class="crm-link" href="admin-newsletter.html?edit=' + encodeURIComponent(c.id) + '">Edit name, company, state, phone and address →</a> <span class="crm-muted">(opens this person\u2019s contact card on the CRM page)</span></p>' : '') +
+      (C.can('write') ? '<p class="crm-small crm-muted" style="margin:14px 0 0;">The email address, ship-to address, email groups, notes and sign-in account are still edited on the <a class="crm-link" href="admin-newsletter.html?edit=' + encodeURIComponent(c.id) + '">CRM page</a>.</p>' : '') +
       '</div>';
 
     // Why a purchase does or does not count
@@ -124,6 +128,7 @@
     FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
+    on('#editDetails', editDetails);
     on('#promote', promote); on('#override', override); on('#release', release); on('#mergeC', mergeContact);
     on('#recheck', function () { C.api('POST', '/api/crm/contacts/' + id + '/reconcile', {}).then(function (r) { if (!r.ok) { C.toast(C.problem(r)); return; } C.toast(r.data.changed ? 'The label changed' : r.data.needsReview ? 'Their purchase no longer qualifies. Take a look.' : 'Still the same'); load(); }); });
     var ow = document.getElementById('ownerSel');
@@ -137,6 +142,26 @@
       title: 'Move to Prospect', submit: 'Move to Prospect',
       body: '<p class="crm-small crm-muted">Use this when they have shown real buying interest but have not asked for a quote. The reason is saved with the change.</p>' + C.field('Why are they a Prospect?', '<input type="text" id="pWhy" maxlength="255" required placeholder="e.g. Asked about pricing at a conference">', '', 'pWhy'),
       onSubmit: function (f) { return C.api('POST', '/api/crm/contacts/' + id + '/promote', { reason: f.querySelector('#pWhy').value }).then(function (r) { if (r.ok) { C.toast('Moved to Prospect'); load(); return; } return C.problem(r); }); }
+    });
+  }
+  // Edit details: a pop-up over this page, so the person stays in the Customer Hub. The email address is not here (changing it also moves the sign-in account's email,
+  // which is still done on the CRM page); ship-to, groups, notes and the sign-in account are still there too.
+  function editDetails() {
+    var c = data.contact;
+    function box(id, label, key, extra) { return C.field(label, '<input type="text" id="' + id + '" maxlength="' + extra.max + '" value="' + esc(c[key] || '') + '"' + (extra.ph ? ' placeholder="' + esc(extra.ph) + '"' : '') + '>', '', id); }
+    C.dialog({
+      title: 'Edit details',
+      submit: 'Save',
+      body: '<p class="crm-small crm-muted" style="margin:0 0 12px;">' + esc(c.email) + ' (the email address is changed on the CRM page).</p>' +
+        '<div class="a-form-row">' + box('edName', 'Name', 'name', { max: 255 }) + box('edCompany', 'Company', 'company', { max: 255 }) + '</div>' +
+        box('edStreet', 'Street address', 'street', { max: 255 }) +
+        '<div class="a-form-row">' + box('edCity', 'City', 'city', { max: 128 }) + box('edState', 'State', 'state', { max: 64, ph: 'e.g. PA' }) + '</div>' +
+        '<div class="a-form-row">' + box('edZip', 'ZIP', 'zip', { max: 16 }) + box('edPhone', 'Phone', 'phone', { max: 32 }) + '</div>',
+      onSubmit: function (f) {
+        function v(sel) { return f.querySelector(sel).value; }
+        return C.api('PUT', '/api/crm/contacts/' + id, { name: v('#edName'), company: v('#edCompany'), phone: v('#edPhone'), street: v('#edStreet'), city: v('#edCity'), state: v('#edState'), zip: v('#edZip') })
+          .then(function (r) { if (r.ok) { C.toast(r.data.changed && r.data.changed.length ? 'Details saved' : 'Nothing changed'); load(); return; } return C.problem(r); });
+      }
     });
   }
   function override() {

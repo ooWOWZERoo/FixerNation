@@ -219,7 +219,8 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
      WHERE contact_id = ? OR LOWER(TRIM(email)) = LOWER(TRIM(?)) ORDER BY id DESC`, [id, c.email]);
 
   res.json({
-    contact: contactRow(c),
+    // The details staff may edit from this page (Edit details) are added here and not to contactRow, so the list never carries a phone number or a street address.
+    contact: { ...contactRow(c), phone: c.phone || '', street: c.street || '', city: c.city || '', zip: c.zip || '' },
     // Phase 6: first and latest touch, or null for each when none was recorded (never guessed from the signup form's name). Advisory: a visitor's browser can forge it.
     attribution: attributionView(c),
     quotes: quotes.map(q => ({ id: q.id, quoteNumber: q.quote_number, status: q.status, amountCents: q.quoted_amount_cents === null ? null : Number(q.quoted_amount_cents), sentAt: q.quote_sent_at || null, acceptedAt: q.accepted_at || null, opportunityId: q.opportunity_id || null })),
@@ -235,22 +236,43 @@ router.get('/:id', requireAuth, requireCrm('view'), async (req, res) => {
   });
 });
 
-// Owner. A CRM Admin or Sales role may set it; the owner must be a real admin.
+// Change a person: the Owner (a real admin, or null for nobody) and/or the details staff edit from the person page (Edit details): name, phone, company, street, city, state,
+// ZIP. A CRM Admin or Sales role may do either. The email address is NOT changed here: it moves the sign-in account's email with it, which stays on the older CRM page for now
+// (docs/reference/contact-pages-merge-requirements.md). Only the columns listed in DETAIL_FIELDS are ever written, each trimmed and cut at its column's size; the audit row names
+// the fields that changed and never their values.
+const DETAIL_FIELDS = { name: 255, phone: 32, company: 255, street: 255, city: 128, state: 64, zip: 16 };
 router.put('/:id', requireAuth, requireCrm('write'), async (req, res) => {
   const id = posInt(req.params.id);
-  const [[c]] = id ? await pool.query('SELECT id, assigned_admin_id FROM newsletter_contacts WHERE id = ?', [id]) : [[null]];
+  const [[c]] = id ? await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [id]) : [[null]];
   if (!c) return res.status(404).json({ error: 'Contact not found' });
   const b = req.body || {};
-  if (!Object.prototype.hasOwnProperty.call(b, 'assignedAdminId')) return res.status(400).json({ error: 'Nothing to change.' });
-  let owner = null;
-  if (b.assignedAdminId !== null) {
-    owner = posInt(b.assignedAdminId);
-    const [[a]] = owner ? await pool.query('SELECT id FROM admin_users WHERE id = ?', [owner]) : [[null]];
-    if (!a) return res.status(400).json({ error: 'That staff member does not exist.' });
+  const has = (k) => Object.prototype.hasOwnProperty.call(b, k);
+  const detailKeys = Object.keys(DETAIL_FIELDS).filter(has);
+  if (!has('assignedAdminId') && !detailKeys.length) return res.status(400).json({ error: 'Nothing to change.' });
+
+  const set = {};
+  for (const k of detailKeys) {
+    if (typeof b[k] !== 'string') return res.status(400).json({ error: `${k} must be text.` });
+    const v = b[k].trim().slice(0, DETAIL_FIELDS[k]);
+    if (v !== String(c[k] || '')) set[k] = v;
   }
-  await pool.query('UPDATE newsletter_contacts SET assigned_admin_id = ? WHERE id = ?', [owner, id]);
-  await crmAudit(req, { action: 'crm_contact_owner_changed', entityType: 'crm_contact', entityId: id, prev: { assignedAdminId: c.assigned_admin_id }, next: { assignedAdminId: owner } });
-  res.json({ ok: true });
+  let owner = c.assigned_admin_id || null, ownerChanged = false;
+  if (has('assignedAdminId')) {
+    owner = null;
+    if (b.assignedAdminId !== null) {
+      owner = posInt(b.assignedAdminId);
+      const [[a]] = owner ? await pool.query('SELECT id FROM admin_users WHERE id = ?', [owner]) : [[null]];
+      if (!a) return res.status(400).json({ error: 'That staff member does not exist.' });
+    }
+    ownerChanged = owner !== (c.assigned_admin_id || null);
+  }
+
+  const cols = Object.keys(set);
+  if (cols.length) await pool.query(`UPDATE newsletter_contacts SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => set[k]), id]);
+  if (has('assignedAdminId')) await pool.query('UPDATE newsletter_contacts SET assigned_admin_id = ? WHERE id = ?', [owner, id]);
+  if (has('assignedAdminId')) await crmAudit(req, { action: 'crm_contact_owner_changed', entityType: 'crm_contact', entityId: id, prev: { assignedAdminId: c.assigned_admin_id }, next: { assignedAdminId: owner } });
+  if (cols.length) await crmAudit(req, { action: 'crm_contact_details_changed', entityType: 'crm_contact', entityId: id, next: { fields: cols } });
+  res.json({ ok: true, changed: cols, ownerChanged });
 });
 
 router.post('/:id/promote', requireAuth, requireCrm('promote_prospect'), async (req, res) => {

@@ -12,7 +12,7 @@ const SERVER = path.join(__dirname, '..', '..');
 const SCHEMA = `
 CREATE TABLE admin_users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, email TEXT, email_verified INTEGER NOT NULL DEFAULT 1, crm_role TEXT NOT NULL DEFAULT 'admin', password_hash TEXT DEFAULT 'x');
 CREATE TABLE settings (setting_key TEXT PRIMARY KEY, setting_value TEXT);
-CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, phone TEXT, company TEXT, state TEXT, signup_date TEXT DEFAULT '2026-01-01 00:00:00',
+CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, phone TEXT, company TEXT, state TEXT, street TEXT, city TEXT, zip TEXT, signup_date TEXT DEFAULT '2026-01-01 00:00:00',
   source TEXT DEFAULT 'Homepage', status TEXT NOT NULL DEFAULT 'Subscribed',
   crm_classification TEXT NOT NULL DEFAULT 'suspect', classification_updated_at TEXT, classification_locked INTEGER NOT NULL DEFAULT 0,
   assigned_admin_id INTEGER, last_contacted_at TEXT, crm_source TEXT);
