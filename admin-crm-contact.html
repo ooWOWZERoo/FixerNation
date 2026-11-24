@@ -71,7 +71,7 @@
     (hub ? C.staff() : Promise.resolve([])).then(function (list) { staff = list; load(); });
   });
 
-  var editOpened = false, scrolled = false;
+  var editOpened = false, scrolled = false, purchOpened = false;
   function load() {
     C.loading(root);
     Promise.all([C.api('GET', '/api/admin/contacts/' + id + '/card'), hub ? C.api('GET', '/api/crm/contacts/' + id) : Promise.resolve(null)]).then(function (res) {
@@ -127,9 +127,12 @@
       '</div></div>' + (c.hasAccount ? '<p style="margin:0 0 10px;">' + pill(c.accountVerified, 'Verified', 'Unverified') + ' Registered on the public site.</p><div id="rolesBox"><span class="crm-muted">Loading roles…</span></div>'
         : '<p style="margin:0;">' + pill(false, '', 'No account') + ' They have not signed up on the public site.</p>') + '</div>';
 
+    // Purchases and licenses (every purchase with its seats). Anyone who can see the person sees the list; a CRM Admin manages them in the pop-up.
+    h += '<div class="a-card" id="purchases"><div class="a-card-head"><h2>Purchases and licenses</h2>' + (C.can('manage_purchases') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="managePurch">Manage purchases and licenses…</button>' : '') + '</div><div id="purchList"><span class="crm-muted">Loading…</span></div></div>';
+
     if (d) {
     // Why a purchase does or does not count
-    h += '<div class="a-card" id="purchases"><div class="a-card-head"><h2>Purchases and the Customer rule</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">A purchase makes someone a Customer only when all three checks pass. An accepted quote, an invoice or a PO number does not count on its own.</p>';
+    h += '<div class="a-card" id="customerRule"><div class="a-card-head"><h2>Purchases and the Customer rule</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">A purchase makes someone a Customer only when all three checks pass. An accepted quote, an invoice or a PO number does not count on its own.</p>';
     h += data.purchases.length ? '<table class="a-table crm-check-table" aria-label="Purchases and whether each one counts"><thead><tr><th scope="col">Purchase</th><th scope="col">Paid?</th><th scope="col">Amount over $0?</th><th scope="col">Not a trial?</th><th scope="col">Counts?</th></tr></thead><tbody>' +
       data.purchases.map(function (p) {
         var paid = p.paymentStatus === 'paid', amt = p.amountCents !== null && p.amountCents > 0;
@@ -166,12 +169,15 @@
       FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
     }
     if (c.hasAccount) drawRoles();
+    drawPurchaseCard();
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
     on('#editDetails', editDetails); on('#toggleSub', toggleSub); on('#deleteC', deleteC);
-    on('#resendV', resendV); on('#resetPw', resetPw); on('#delAcct', delAcct);
+    on('#managePurch', managePurchases); on('#resendV', resendV); on('#resetPw', resetPw); on('#delAcct', delAcct);
     // The Contacts list's pencil opens this page with ?edit=1: the Edit details pop-up comes up over the person's page (once), and the person page stays behind it.
     if (!editOpened && new URLSearchParams(window.location.search).get('edit') === '1' && C.can('write')) { editOpened = true; editDetails(); }
+    // The list's receipt button opens this page with ?purchases=1: the Purchases and licenses pop-up comes up over the person's page (once, for a CRM Admin).
+    if (!purchOpened && new URLSearchParams(window.location.search).get('purchases') === '1' && C.can('manage_purchases')) { purchOpened = true; managePurchases(); }
     // The list's receipt button links to #purchases; the page draws after it loads, so scroll once it is there.
     if (!scrolled && window.location.hash === '#purchases' && document.getElementById('purchases')) { scrolled = true; document.getElementById('purchases').scrollIntoView(); }
     on('#promote', promote); on('#override', override); on('#release', release); on('#mergeC', mergeContact);
@@ -240,6 +246,104 @@
       return;
     }
     C.dialog({ title: 'Are you sure?', submit: 'Yes, continue', danger: true, body: '<p>' + esc(flags.ask) + '</p>', onSubmit: function () { return send(); } });
+  }
+
+  // ---- Purchases and licenses (P1 to P4, P6 and the three seat actions of P7) -------------------------------------------------------------------------------------------------
+  var PAGE_PURCH = '/api/admin/contacts/' + id + '/purchases';
+  function purchaseHead(p) {
+    var seat = (p.seats || [])[0], used = (p.seats || []).filter(function (x) { return x.status === 'registered'; }).length;
+    if (p.productType === 'single_license') return '🔑 Single teacher license';
+    if (p.productType === 'group_license') return '🏫 Group license' + (p.licenseProductName ? ' (' + p.licenseProductName + ')' : '') + ' — ' + used + '/' + p.seatCount + ' seats used';
+    if (p.productType === 'book') return '📗 Book: ' + (p.bookTitle || '(deleted book)');
+    return 'Purchase (' + p.productType + ')'; // an older type, such as a membership from before that feature was removed
+  }
+  function purchaseSub(p) {
+    var seat = (p.seats || [])[0], bits = ['Purchased ' + C.date(p.purchasedAt)];
+    if (p.productType === 'single_license') bits.push(seat && seat.status === 'registered' ? 'Registered to ' + seat.registeredName : 'Pending, awaiting sign-up from ' + (seat ? seat.invitedEmail : 'this contact'));
+    if (p.productType === 'group_license') bits.push(p.schoolDomain || 'no school domain set');
+    if (p.notes) bits.push(p.notes);
+    return bits.join(' · ');
+  }
+  function payBadge(p) {
+    if (!p.paymentMethod || p.paymentMethod === 'manual') return '';
+    return ' <span class="a-pill ' + (p.paymentStatus === 'paid' ? 'a-pill-success' : 'a-pill-neutral') + '">' + esc((p.paymentMethod === 'po' ? 'PO' + (p.poNumber ? ' ' + p.poNumber : '') : 'Stripe') + ' · ' + (p.paymentStatus === 'paid' ? 'Paid' : 'Pending')) + '</span>';
+  }
+  function drawPurchaseCard() {
+    var box = document.getElementById('purchList');
+    C.api('GET', PAGE_PURCH).then(function (r) {
+      if (!box || !document.body.contains(box)) return;
+      if (!r.ok) { box.innerHTML = '<span class="crm-inline-error">Could not load purchases.</span>'; return; }
+      var list = r.data.purchases || [];
+      box.innerHTML = list.length ? '<ul class="crm-list">' + list.map(function (p) {
+        return '<li><div>' + esc(purchaseHead(p)) + payBadge(p) + '<div class="crm-small crm-muted">' + esc(purchaseSub(p)) + '</div></div>' + (p.invoiceId ? '<a class="crm-link" href="admin-invoice-print.html?id=' + esc(p.invoiceId) + '" target="_blank" rel="noopener">View invoice</a>' : '') + '</li>';
+      }).join('') + '</ul>' : C.empty('No purchases logged for this person.', '🧾');
+    });
+  }
+  function seatRow(pid, s) {
+    if (s.status === 'registered') return '<div class="crm-row-actions" style="margin:6px 0;"><span style="flex:1;">✅ ' + esc(s.registeredName) + ' <span class="crm-muted crm-small">(' + esc(s.invitedEmail) + ')</span></span><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="free" data-p="' + esc(pid) + '" data-s="' + esc(s.id) + '" title="Free this seat (does not delete the account)">Free seat</button></div>';
+    return '<div class="crm-row-actions" style="margin:6px 0;"><label class="crm-sr" for="se' + esc(s.id) + '">Email for seat ' + esc(s.id) + '</label><input type="email" id="se' + esc(s.id) + '" placeholder="teacher@school.org" value="' + esc(s.invitedEmail || '') + '" style="flex:1; min-width:180px;">' +
+      '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="invite" data-p="' + esc(pid) + '" data-s="' + esc(s.id) + '">Save invite</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="regnow" data-p="' + esc(pid) + '" data-s="' + esc(s.id) + '">Register now</button></div>';
+  }
+  function purchaseBox(p) {
+    var markPaid = p.paymentStatus === 'pending' && !p.invoiceId ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="paid" data-p="' + esc(p.id) + '">Mark as paid</button>' : '';
+    var used = (p.seats || []).filter(function (x) { return x.status === 'registered'; }).length;
+    return '<div class="a-card" style="margin-bottom:12px; box-shadow:none; border:1px solid var(--a-border);"><div class="crm-row-actions" style="justify-content:space-between; align-items:flex-start;"><div><strong>' + esc(purchaseHead(p)) + '</strong>' + payBadge(p) + '<div class="crm-small crm-muted">' + esc(purchaseSub(p)) + '</div></div><div class="crm-row-actions">' +
+      (p.invoiceId ? '<a class="a-btn a-btn-outline a-btn-sm" href="admin-invoice-print.html?id=' + esc(p.invoiceId) + '" target="_blank" rel="noopener">View invoice</a>' : '') + markPaid +
+      '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-act="del" data-p="' + esc(p.id) + '" style="color:var(--a-danger); border-color:var(--a-danger);">Delete…</button></div></div>' +
+      '<details style="margin-top:8px;"><summary>Edit</summary><div style="padding-top:8px;">' +
+      (p.productType === 'group_license' ? '<div class="a-form-row">' + C.field('Total seats', '<input type="number" id="pe' + esc(p.id) + 'seats" min="' + (used || 1) + '" max="10000" value="' + esc(p.seatCount) + '">', '', 'pe' + p.id + 'seats') + C.field('School domain', '<input type="text" id="pe' + esc(p.id) + 'dom" maxlength="255" placeholder="e.g. lincolnhigh.edu" value="' + esc(p.schoolDomain || '') + '">', '', 'pe' + p.id + 'dom') + '</div>' : '') +
+      C.field('Notes', '<input type="text" id="pe' + esc(p.id) + 'notes" maxlength="2000" value="' + esc(p.notes || '') + '">', '', 'pe' + p.id + 'notes') +
+      '<button type="button" class="a-btn a-btn-primary a-btn-sm" data-act="save" data-p="' + esc(p.id) + '" data-type="' + esc(p.productType) + '">Save changes</button></div></details>' +
+      (p.productType === 'group_license' ? '<div style="margin-top:10px;">' + (p.seats || []).map(function (s) { return seatRow(p.id, s); }).join('') + '</div>' : '') + '</div>';
+  }
+  function managePurchases() {
+    var dlg = C.dialog({
+      title: 'Purchases and licenses — ' + (card.name || card.email), submit: null,
+      body: '<div id="pmBody"><span class="crm-muted">Loading…</span></div>',
+      onOpen: function (f) { f.closest('.a-modal').style.maxWidth = '720px'; }
+    });
+    var body = dlg.form.querySelector('#pmBody');
+    function refresh() {
+      return C.api('GET', PAGE_PURCH).then(function (r) {
+        if (!r.ok) { body.innerHTML = '<span class="crm-inline-error">' + esc(C.problem(r)) + '</span>'; return; }
+        var list = r.data.purchases || [];
+        body.innerHTML = (list.length ? list.map(purchaseBox).join('') : C.empty('No purchases logged for this person.', '🧾')) +
+          '<div style="border-top:1px solid var(--a-border); margin-top:16px; padding-top:14px;"><h4 style="margin:0 0 8px;">Add a purchase</h4><p class="crm-small crm-muted" style="margin:0 0 10px;">For a sale made outside the site. Card and PO sales are created by checkout and quote acceptance.</p>' +
+          '<div class="a-form-row">' + C.field('Type', '<select id="npType"><option value="single_license">Single teacher license</option><option value="group_license">Group license (school block)</option></select>', '', 'npType') + '<div id="npGroup" hidden>' + C.field('Number of seats', '<input type="number" id="npSeats" min="1" max="10000" value="5">', '', 'npSeats') + '</div></div>' +
+          '<div id="npDomainWrap" hidden>' + C.field('School domain', '<input type="text" id="npDomain" maxlength="255" placeholder="e.g. lincolnhigh.edu">', '', 'npDomain') + '</div>' +
+          C.field('Notes', '<input type="text" id="npNotes" maxlength="2000" placeholder="Optional">', '', 'npNotes') + '<button type="button" class="a-btn a-btn-primary" data-act="add">+ Add purchase</button></div>';
+        var t = body.querySelector('#npType');
+        t.addEventListener('change', function () { var g = t.value === 'group_license'; body.querySelector('#npGroup').hidden = !g; body.querySelector('#npDomainWrap').hidden = !g; });
+      });
+    }
+    function done(r, msg) { if (!r.ok) { dlg.error(C.problem(r)); return; } C.toast(msg); load(); return refresh(); } // load() redraws the page behind the pop-up, so the label and the Customer rule table follow
+    function call(method, url, b) { return C.api(method, PAGE_PURCH + url, b); }
+    function val(sel) { var el = body.querySelector(sel); return el ? el.value : ''; }
+    body.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-act]'); if (!b) return;
+      var act = b.getAttribute('data-act'), p = b.getAttribute('data-p'), sid = b.getAttribute('data-s');
+      if (act === 'add') {
+        var body2 = { productType: val('#npType'), notes: val('#npNotes').trim() };
+        if (body2.productType === 'group_license') { body2.seatCount = Number(val('#npSeats')); body2.schoolDomain = val('#npDomain').trim(); if (!(body2.seatCount > 0)) { dlg.error('The seat count must be at least 1.'); return; } }
+        call('POST', '', body2).then(function (r) { return done(r, 'Purchase added'); });
+      } else if (act === 'paid') call('PUT', '/' + p, { paymentStatus: 'paid' }).then(function (r) { return done(r, 'Marked as paid'); });
+      else if (act === 'save') {
+        var upd = { notes: val('#pe' + p + 'notes').trim() };
+        if (b.getAttribute('data-type') === 'group_license') { upd.seatCount = Number(val('#pe' + p + 'seats')); upd.schoolDomain = val('#pe' + p + 'dom').trim(); }
+        call('PUT', '/' + p, upd).then(function (r) { return done(r, 'Purchase updated'); });
+      } else if (act === 'del') {
+        if (!window.confirm('Delete this purchase? Any license seats tied to it will be removed too.')) return;
+        call('DELETE', '/' + p, {}).then(function (r) { return done(r, 'Purchase deleted'); });
+      } else if (act === 'invite') call('PUT', '/' + p + '/seats/' + sid, { invitedEmail: val('#se' + sid).trim() }).then(function (r) { return done(r, 'Seat updated'); });
+      else if (act === 'regnow') {
+        var em = val('#se' + sid).trim(); if (!em) { dlg.error('Enter an email first.'); return; }
+        call('POST', '/' + p + '/seats/' + sid + '/register', { email: em }).then(function (r) { return done(r, 'Seat registered'); });
+      } else if (act === 'free') {
+        if (!window.confirm('Free this seat? The account itself will not be affected, just this seat, so it can be handed to someone else.')) return;
+        call('POST', '/' + p + '/seats/' + sid + '/unregister', {}).then(function (r) { return done(r, 'Seat freed up'); });
+      }
+    });
+    refresh();
   }
 
   // ---- The sign-in account (E8 to E11) and its roles (E12) ---------------------------------------------------------------------------------------------------------------

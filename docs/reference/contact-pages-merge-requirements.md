@@ -1,6 +1,6 @@
 # Merging the two contact screens into one: requirements and inventory
 
-Status: **decisions D1 to D10 confirmed by the owner on 2026-11-23 (section 8). Phases 0, 1 (the Edit details pop-up), 2 (the Contacts list) and 3 (the rest of the person's card) are built; phases 4 to 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
+Status: **decisions D1 to D10 confirmed by the owner on 2026-11-23 (section 8). Phases 0, 1 (the Edit details pop-up), 2 (the Contacts list), 3 (the rest of the person's card) and 4 (purchases and seats) are built; phases 5 and 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
 
 ## 1. The goal, in the owner's words
 
@@ -146,7 +146,7 @@ Today the older routes only require sign-in, so a **Read-only** CRM role can edi
 1. **Edit details pop-up on the person page** (name, company, street, city, state, ZIP, phone: part of E1 and E2). *Built 2026-11-23.* The rest of the Edit Contact box is not in it yet; the person page links to the older page for it until phase 3.
 2. **List parity on `admin-crm-contacts.html`:** L1 to L11 (search, group, status, source and label filters, sorting, paging, the column picker with Role and Grade Levels, row buttons, the three cards), T2 (groups), T4 (export), R1 (subscription toggle), R2 (delete, with every rule above). Server paging (D6). *Built 2026-11-24* (see section 11 for what it does and what it leaves for later phases).
 3. **The rest of the person's card:** E1 email (with the sign-in email move and the duplicate-email handling, E13), E3 ship-to, E4 source, E5 subscription, E6 groups, E7 notes, E8 to E12 (site account block, resend verification, password reset, delete account, roles), and T1 (+ Add a person with the same fields as the old + Add Contact). The person page works with the Hub off (D7). *Built 2026-11-24* (section 12).
-4. **Purchases and licenses pop-up on the person page:** P1 to P4, P6, and the three seat actions in P7 (assign an email, register directly, free a seat). The `book` purchase type is not carried over (D10). P5 and P8 stay on the Licenses page.
+4. **Purchases and licenses pop-up on the person page:** P1 to P4, P6, and the three seat actions in P7 (assign an email, register directly, free a seat). The `book` purchase type is not carried over (D10). P5 and P8 stay on the Licenses page. *Built 2026-11-24* (section 13).
 5. **One importer:** T3 (the Hub importer gains groups, address, signup date and notes).
 6. **Retire:** first move `createPurchase`, `attachPurchaseDetails` and `assignContactToGroups` out of `routes/newsletter.js` into `server/lib/` (other routes import them, see section 3). Then redirect `admin-newsletter.html`, repoint the **CRM** menu item and the two dashboard buttons (D9), keep the redirect in `mission-control-static-files.txt`, and rewrite the four end-to-end specs. `routes/newsletter.js` itself stays: public sign-up, the unsubscribe link and the Licenses, Quotes, Campaigns, Morning Boost, Orders and School Admins pages still call it.
 
@@ -231,3 +231,18 @@ Checking every row against the real code found these, all fixed above:
 5. **With the Hub on, a person added here also becomes a Suspect owned by whoever added them**, as the Hub's own Add did; the Hub's `POST /api/crm/contacts` is no longer used by a page (kept for now, tested).
 
 **Still planned:** the Purchases and licenses pop-up with the three seat actions (phase 4; with the Hub off the page has no purchases section yet), one importer and Import people working with the Hub off (phase 5), and retiring the older page (phase 6).
+
+## 13. Phase 4 as built (2026-11-24)
+
+**The person page** has a **Purchases and licenses** card (everyone who can see the person sees the list, with the invoice link) and, for a CRM Admin, **Manage purchases and licenses…**: a pop-up over the page with every purchase and its seats. Per purchase: **Mark as paid** (a pending one that is not on an invoice), **Edit** (notes; for a group license the seat count and school domain), **Delete…**, **View invoice**. Per seat of a group license: **Save invite** (an open seat), **Register now** (an existing account, by email), **Free seat** (the account is untouched). **Add a purchase**: a single teacher license or a group license (seats, school domain, notes). The Contacts list's receipt button opens the person page with this pop-up already open. The Customer rule table and the label behind the pop-up refresh after each change (Hub on).
+
+**Routes added to `routes/contact-screens.js`:** `GET /:id/purchases` (view), and `POST /:id/purchases`, `PUT` and `DELETE /:id/purchases/:pid`, `PUT /:id/purchases/:pid/seats/:sid`, `POST .../register`, `POST .../unregister`, all on the new action **`manage_purchases`** (CRM Admin only, in `lib/crm-permissions.js`; the role-matrix test pins it). Every purchase id and seat id is checked against the person in the URL (a test tries another person's ids). All the rules are one copy in the new `lib/purchases.js`, which now also holds `createPurchase`, `attachPurchaseDetails`, `assignContactToGroups` and the domain helpers moved out of `routes/newsletter.js` (which re-exports them under the same names, so checkout, quote acceptance, sign-up and invoices are untouched; phase 6 repoints them).
+
+**Differences from the older page, all deliberate:**
+1. **No book type** (D10). Existing book purchases still show in the list (and can be deleted); none can be added.
+2. **Payment status is paid or pending only**, and a purchase that belongs to an invoice cannot be marked paid here (the server answers 409 and says to mark the invoice paid, so every line on it stays in step). The older page's button was hidden for invoice-linked purchases but the route would have accepted it.
+3. **Seat counts and text are checked** (whole number 1 to 10,000; text cut to size); each change is audited by ids and field names, never the school, the notes or an email.
+4. **Deleting a purchase now re-derives the person's label** (the older route did not, so a deleted last purchase left a stale Customer label until the next check). The older route gets this too, through the shared code.
+5. **The older purchase and seat routes still exist** for the older page and the Licenses page until phase 6, with no role check (as before); only the merged screen enforces CRM Admin.
+
+**Still planned:** one importer (phase 5; Import people and + Add a person already work with the Hub on, and Import people must also work with it off), and retiring the older page (phase 6: move `createPurchase` and friends' exports, redirect, repoint the menu item and dashboard buttons, rewrite the four end-to-end specs). License dates, a seat's audiences and the by-school-domain view stay on the Licenses page.

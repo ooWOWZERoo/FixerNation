@@ -6,7 +6,7 @@
 // admin can look and nothing more, which is the access table in the requirements doc (section 5). A test checks every route here is written (path, requireAuth, requireCrmRole('<action>')).
 //
 // Access: view = list, filters, who-am-I, a person's card and roles; write = edit a person, add a person, groups, subscribe toggle, resend verification, send a password reset (CRM Admin and Sales);
-// export = CSV (CRM Admin); erase = delete a contact, delete a sign-in account (CRM Admin).
+// export = CSV (CRM Admin); erase = delete a contact, delete a sign-in account (CRM Admin); manage_purchases = add, edit, mark paid or delete a purchase and assign, register or free a seat (CRM Admin).
 // The older newsletter routes stay as they are for their other callers until each one moves.
 const express = require('express');
 const pool = require('../db/pool');
@@ -22,6 +22,7 @@ const { rolesForContact } = require('../lib/contact-roles');
 const accountActions = require('../lib/contact-account');
 const { matchingContacts } = require('../lib/crm-quotes');
 const cls = require('../lib/crm-classification');
+const P = require('../lib/purchases');
 
 const router = express.Router();
 
@@ -223,6 +224,106 @@ router.delete('/:id/site-account', requireAuth, requireCrmRole('erase'), async (
   if (a.user.role === 'admin' || Number(a.user.is_fne_staff)) return res.status(409).json({ code: 'staff_account', error: 'This is a Fixer Nation staff account and cannot be deleted here.' });
   const r = await accountActions.deleteSiteAccount(a.user.id);
   if (r.status === 200) await crmAudit(req, { action: 'crm_contact_site_account_deleted', entityType: 'crm_contact', entityId: id });
+  res.status(r.status).json(r.body);
+});
+
+// ---- Purchases and licenses (phase 4: P1 to P4, P6 and the three seat actions of P7) --------------------------------------------------------------------------------------
+// A person's purchases with their license seats are visible to anyone who can see the person; adding, changing, marking paid, deleting and the seat actions are CRM Admin only
+// (action manage_purchases: they move money and access). Every purchase and seat id is checked against the person in the URL, so one person's page can never change another's.
+// The rules are one copy in lib/purchases.js (the older routes call it too). The dead "book" type is not offered (decision D10): existing book purchases still show and can be edited or deleted.
+// License dates, a seat's audiences and the by-school-domain view stay on the Licenses page.
+const NEW_PURCHASE_TYPES = ['single_license', 'group_license'];
+const PAY_STATUSES = ['paid', 'pending'];
+
+async function ownedPurchase(contactId, purchaseId) {
+  const cid = posInt(contactId), pid = posInt(purchaseId);
+  if (!cid || !pid) return null;
+  const [[p]] = await pool.query('SELECT * FROM purchases WHERE id = ? AND contact_id = ?', [pid, cid]);
+  return p || null;
+}
+
+router.get('/:id/purchases', requireAuth, requireCrmRole('view'), async (req, res) => {
+  const id = posInt(req.params.id);
+  const [[c]] = id ? await pool.query('SELECT id FROM newsletter_contacts WHERE id = ?', [id]) : [[null]];
+  if (!c) return res.status(404).json({ error: 'Contact not found' });
+  res.json({ purchases: await P.purchasesForContact(id), canManage: can(req.crm.role, 'manage_purchases') });
+});
+
+router.post('/:id/purchases', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
+  const id = posInt(req.params.id);
+  const [[c]] = id ? await pool.query('SELECT id FROM newsletter_contacts WHERE id = ?', [id]) : [[null]];
+  if (!c) return res.status(404).json({ error: 'Contact not found' });
+  const b = req.body && typeof req.body === 'object' ? req.body : {};
+  if (typeof b.productType !== 'string' || !NEW_PURCHASE_TYPES.includes(b.productType)) return res.status(400).json({ error: 'Choose a single teacher license or a group license.' });
+  const seatCount = Number(b.seatCount);
+  if (b.productType === 'group_license' && !(Number.isInteger(seatCount) && seatCount > 0 && seatCount <= 10000)) return res.status(400).json({ error: 'The seat count must be a whole number from 1 to 10,000.' });
+  if (b.schoolDomain !== undefined && typeof b.schoolDomain !== 'string') return res.status(400).json({ error: 'schoolDomain must be text.' });
+  if (b.notes !== undefined && typeof b.notes !== 'string') return res.status(400).json({ error: 'notes must be text.' });
+  const purchaseId = await P.createPurchase(id, { productType: b.productType, seatCount, source: 'Manual Entry', notes: text(b.notes, 2000) || '', schoolDomain: text(b.schoolDomain, 255) || undefined });
+  const [rows] = await pool.query('SELECT * FROM purchases WHERE id = ?', [purchaseId]);
+  const [purchase] = await P.attachPurchaseDetails(rows);
+  await crmAudit(req, { action: 'crm_contact_purchase_added', entityType: 'crm_contact', entityId: id, next: { purchaseId, productType: b.productType, seats: b.productType === 'group_license' ? seatCount : 1 } });
+  res.status(201).json({ purchase });
+});
+
+// Change a purchase: notes, and for a group license the seat count and school domain; or mark a pending one paid. A purchase that belongs to an invoice is marked paid on the invoice (so every line on it stays in step).
+router.put('/:id/purchases/:pid', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
+  const p = await ownedPurchase(req.params.id, req.params.pid);
+  if (!p) return res.status(404).json({ error: 'Purchase not found' });
+  const b = req.body && typeof req.body === 'object' ? req.body : {};
+  const clean = {};
+  for (const k of ['notes', 'schoolDomain']) if (b[k] !== undefined) { if (typeof b[k] !== 'string') return res.status(400).json({ error: `${k} must be text.` }); clean[k] = b[k].trim().slice(0, k === 'notes' ? 2000 : 255); }
+  if (b.seatCount !== undefined) { const n = Number(b.seatCount); if (!(Number.isInteger(n) && n > 0 && n <= 10000)) return res.status(400).json({ error: 'The seat count must be a whole number from 1 to 10,000.' }); clean.seatCount = n; }
+  if (b.paymentStatus !== undefined) {
+    if (typeof b.paymentStatus !== 'string' || !PAY_STATUSES.includes(b.paymentStatus)) return res.status(400).json({ error: 'Payment status must be paid or pending.' });
+    if (p.invoice_id && b.paymentStatus !== p.payment_status) return res.status(409).json({ code: 'on_invoice', error: 'This purchase is on an invoice. Mark the invoice paid on the Invoices page so every line stays in step.' });
+    clean.paymentStatus = b.paymentStatus;
+  }
+  if (!Object.keys(clean).length) return res.status(400).json({ error: 'Nothing to change.' });
+  const r = await P.updatePurchase(p.id, clean);
+  if (r.status === 200) await crmAudit(req, { action: clean.paymentStatus && clean.paymentStatus !== p.payment_status ? 'crm_contact_purchase_paid' : 'crm_contact_purchase_changed', entityType: 'crm_contact', entityId: p.contact_id, next: { purchaseId: p.id, fields: Object.keys(clean) } });
+  res.status(r.status).json(r.body);
+});
+
+router.delete('/:id/purchases/:pid', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
+  const p = await ownedPurchase(req.params.id, req.params.pid);
+  if (!p) return res.status(404).json({ error: 'Purchase not found' });
+  const r = await P.deletePurchase(p.id);
+  if (r.status === 200) await crmAudit(req, { action: 'crm_contact_purchase_deleted', entityType: 'crm_contact', entityId: p.contact_id, next: { purchaseId: p.id, productType: p.product_type } });
+  res.status(r.status).json(r.body);
+});
+
+// The three seat actions of a group license: save the invited email (only an open seat), register an existing account directly, free a claimed seat (the account is untouched).
+async function seatOf(req) {
+  const p = await ownedPurchase(req.params.id, req.params.pid);
+  const sid = posInt(req.params.sid);
+  if (!p || !sid) return null;
+  const [[seat]] = await pool.query('SELECT id FROM license_seats WHERE id = ? AND purchase_id = ?', [sid, p.id]);
+  return seat ? { purchase: p, seatId: sid } : null;
+}
+router.put('/:id/purchases/:pid/seats/:sid', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
+  const s = await seatOf(req);
+  if (!s) return res.status(404).json({ error: 'Seat not found' });
+  const email = (req.body || {}).invitedEmail;
+  if (email !== undefined && typeof email !== 'string') return res.status(400).json({ error: 'invitedEmail must be text.' });
+  const r = await P.assignSeatEmail(s.purchase.id, s.seatId, email);
+  if (r.status === 200) await crmAudit(req, { action: 'crm_contact_seat_invited', entityType: 'crm_contact', entityId: s.purchase.contact_id, next: { purchaseId: s.purchase.id, seatId: s.seatId, cleared: !String(email || '').trim() } });
+  res.status(r.status).json(r.body);
+});
+router.post('/:id/purchases/:pid/seats/:sid/register', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
+  const s = await seatOf(req);
+  if (!s) return res.status(404).json({ error: 'Seat not found' });
+  const email = (req.body || {}).email;
+  if (typeof email !== 'string') return res.status(400).json({ error: 'Email is required' });
+  const r = await P.registerSeat(s.purchase.id, s.seatId, email);
+  if (r.status === 200) await crmAudit(req, { action: 'crm_contact_seat_registered', entityType: 'crm_contact', entityId: s.purchase.contact_id, next: { purchaseId: s.purchase.id, seatId: s.seatId } });
+  res.status(r.status).json(r.body);
+});
+router.post('/:id/purchases/:pid/seats/:sid/unregister', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
+  const s = await seatOf(req);
+  if (!s) return res.status(404).json({ error: 'Seat not found' });
+  const r = await P.unregisterSeat(s.purchase.id, s.seatId);
+  if (r.status === 200) await crmAudit(req, { action: 'crm_contact_seat_freed', entityType: 'crm_contact', entityId: s.purchase.contact_id, next: { purchaseId: s.purchase.id, seatId: s.seatId } });
   res.status(r.status).json(r.body);
 });
 

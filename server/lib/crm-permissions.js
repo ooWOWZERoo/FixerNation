@@ -27,6 +27,7 @@
 //   raise_refund         yes     yes                            -     (punch list G21: flag a purchase as refunded or disputed by hand; it only raises a flag)
 //   decide_refund        yes     -                              -     (G21: confirm or dismiss a refund flag; a confirmed full refund stops the purchase counting as paid in the CRM)
 //   email_demo           yes     yes                            -     (email a prospect demo invitation from Sales > Demo; docs/reference/demo-invitation-email-requirements.md)
+//   manage_purchases     yes     -                              -     (merge phase 4: add, edit, mark paid or delete a purchase by hand, and assign, register or free a license seat, from a person's page; it moves money and access)
 //   decide_repeat        yes     the owner of the request's deal  -     (punch list G5: approve or decline a district's reorder or seat-change request; the route checks the deal owner. A deal nobody owns: CRM Admin only)
 //
 // The older admin routes use requireCrmRole (below) with the same matrix: admin accounts need assign_roles, a quote edit or send needs write (and
@@ -61,6 +62,7 @@ const ALLOWED = {
   decide_refund: ['admin'],
   decide_repeat: ['admin', 'sales'],
   email_demo: ['admin', 'sales'],
+  manage_purchases: ['admin'],
 };
 
 function can(role, action) {

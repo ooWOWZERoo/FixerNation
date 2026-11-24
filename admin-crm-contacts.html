@@ -215,7 +215,7 @@
   function rowButtons(c) {
     var subscribed = c.status === 'Subscribed', b = '';
     if (C.can('write') && c.hasAccount && !c.accountVerified) b += '<button type="button" class="a-icon-btn" title="Resend verification email" aria-label="Resend verification email to ' + esc(c.email) + '" data-resend="' + esc(c.id) + '">📧</button>';
-    b += '<a class="a-icon-btn" href="admin-crm-contact.html?id=' + esc(c.id) + '#purchases" title="Purchases &amp; licenses" aria-label="Purchases and licenses for ' + esc(c.name || c.email) + '">🧾</a>';
+    b += '<a class="a-icon-btn" href="admin-crm-contact.html?id=' + esc(c.id) + '&amp;purchases=1#purchases" title="Purchases &amp; licenses" aria-label="Purchases and licenses for ' + esc(c.name || c.email) + '">🧾</a>';
     if (C.can('write')) b += '<a class="a-icon-btn" href="admin-crm-contact.html?id=' + esc(c.id) + '&amp;edit=1" title="Edit details" aria-label="Edit details for ' + esc(c.name || c.email) + '">✏️</a>' +
       '<button type="button" class="a-icon-btn" title="' + (subscribed ? 'Unsubscribe' : 'Resubscribe') + '" aria-label="' + (subscribed ? 'Unsubscribe ' : 'Resubscribe ') + esc(c.email) + '" data-sub="' + esc(c.id) + '" data-to="' + (subscribed ? 'Unsubscribed' : 'Subscribed') + '">' + (subscribed ? '🔕' : '🔔') + '</button>';
     if (C.can('erase')) b += '<button type="button" class="a-icon-btn danger" title="Delete" aria-label="Delete ' + esc(c.name || c.email) + '" data-del="' + esc(c.id) + '" data-name="' + esc(c.name || c.email) + '">🗑️</button>';

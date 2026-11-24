@@ -479,110 +479,157 @@
    "features": [
     "P2"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "id=\"npType\""
+   },
+   "note": "Done in phase 4: the Add a purchase form shows seats and school domain for a group license; the book type is dropped (D10)"
   },
   "fetchPurchases": {
    "features": [
     "P1"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "var PAGE_PURCH"
+   }
   },
   "openPurchasesModal": {
    "features": [
     "P1"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function managePurchases"
+   },
+   "note": "Done in phase 4: Purchases and licenses pop-up on the person page (CRM Admin manages; everyone who sees the person sees the list)"
   },
   "closePurchasesModal": {
    "features": [
     "P1"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function drawPurchaseCard"
+   }
   },
   "renderPurchasesList": {
    "features": [
     "P1"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function drawPurchaseCard"
+   }
   },
   "purchaseCard": {
    "features": [
     "P1"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function purchaseBox"
+   }
   },
   "seatRowHtml": {
    "features": [
     "P7"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function seatRow"
+   }
   },
   "togglePurchaseEdit": {
    "features": [
     "P3"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "<summary>Edit</summary>"
+   }
   },
   "savePurchaseEdit": {
    "features": [
     "P3"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "data-act=\"save\""
+   }
   },
   "markPurchasePaid": {
    "features": [
     "P4"
    ],
-   "status": "planned",
-   "phase": 4,
-   "note": "Always set payment_status explicitly on an already-paid purchase"
+   "status": "moved",
+   "note": "Done in phase 4: pending, not on an invoice; the server refuses an invoice-linked one (mark the invoice paid)",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "paymentStatus: 'paid'"
+   }
   },
   "registerSeatDirectly": {
    "features": [
     "P7"
    ],
-   "status": "planned",
-   "phase": 4,
-   "note": "D3: moves into the purchases pop-up on the person page, CRM Admin only"
+   "status": "moved",
+   "note": "Done in phase 4: CRM Admin only",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "data-act=\"regnow\""
+   }
   },
   "unregisterSeat": {
    "features": [
     "P7"
    ],
-   "status": "planned",
-   "phase": 4,
-   "note": "D3: moves into the purchases pop-up on the person page, CRM Admin only"
+   "status": "moved",
+   "note": "Done in phase 4: CRM Admin only; the account is untouched",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "data-act=\"free\""
+   }
   },
   "addPurchase": {
    "features": [
     "P2"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "data-act=\"add\""
+   }
   },
   "deletePurchase": {
    "features": [
     "P6"
    ],
-   "status": "planned",
-   "phase": 4
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "data-act=\"del\""
+   }
   },
   "assignSeatEmail": {
    "features": [
     "P7"
    ],
-   "status": "planned",
-   "phase": 4,
-   "note": "D3: moves into the purchases pop-up on the person page, CRM Admin only"
+   "status": "moved",
+   "note": "Done in phase 4: CRM Admin only",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "data-act=\"invite\""
+   }
   },
   "crmLabelHtml": {
    "features": [
