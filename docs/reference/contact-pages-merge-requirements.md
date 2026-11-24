@@ -68,20 +68,20 @@ How "100% sure" is achieved (section 7): every control, function, route and link
 | # | Feature | Today |
 |---|---|---|
 | R1 | Unsubscribe or resubscribe (toggle) | `PUT` with a status |
-| R2 | Delete the contact. **Refused** when the person owns a purchase or invoice (purchases and invoices cascade-delete with a contact; a purchase takes its seats) | `DELETE /contacts/:id`, 409 `contact_owns_purchases`; closes the sign-in account (`lib/account-closing.js`) |
+| R2 | Delete the contact. **Refused** when the person owns a purchase or invoice (purchases and invoices cascade-delete with a contact; a purchase takes its seats), and refused for a Fixer Nation staff account (`staff_account`). If the person has a sign-in account it is closed (`lib/account-closing.js`); when that removes a seat or a role the page asks first (`confirm_close`). When the person has CRM items (tasks, notes, files) a second prompt offers to erase them too, CRM Admin only (`contact_has_crm_items`) | `DELETE /contacts/:id`, 409 `contact_owns_purchases` |
 
 **Purchases and Licenses box (per person)**
 
 | # | Feature | Today |
 |---|---|---|
 | P1 | List the person's purchases and licenses, with the invoice link (`admin-invoice-print.html?id=`) | `GET /contacts/:id/purchases` |
-| P2 | **+ Add Purchase** by hand (type, product, seats, dates, amount, payment status) | `POST /contacts/:id/purchases`; calls `crmHooks.purchaseChanged` |
+| P2 | **+ Add Purchase** by hand. Types on the page: `book`, `single_license`, `group_license` (seat count and school domain for a group license). The `book` type loads `GET /api/books?all=true`; FNE sells no books, see D10 | `POST /contacts/:id/purchases`; calls `crmHooks.purchaseChanged` |
 | P3 | Edit a purchase | `PUT /purchases/:id` |
 | P4 | Mark as Paid | `PUT /purchases/:id` (see the payment-status drift note in memory) |
-| P5 | License dates | `PUT /purchases/:id/license-dates` |
+| P5 | License dates. **Not on the older page**: only `admin-licenses.html` calls this route, so it is not part of the merge | `PUT /purchases/:id/license-dates` |
 | P6 | Delete a purchase | `DELETE /purchases/:id` |
-| P7 | Seats: assign an email, register directly, free a seat, set a seat's audiences | `PUT/POST /purchases/:id/seats/...`, `PUT /seats/:id/audiences` |
-| P8 | Purchases by school domain (also used by the Licenses page) | `GET/DELETE /purchases/by-domain` |
+| P7 | Seats on a person's group license: **assign an email, register directly, free a seat**. **Only the older page has these three** (the Licenses page does not call them). Setting a seat's audiences is Licenses-only and not part of the merge | `PUT /purchases/:id/seats/:seatId`, `POST .../register`, `POST .../unregister`; (audiences: `PUT /seats/:id/audiences`) |
+| P8 | Purchases by school domain. **Licenses page only**; the older page does not use it | `GET/DELETE /purchases/by-domain` |
 
 **Links out of the older page:** the person page, `admin-districts.html`, `admin-school-admins.html`, `admin-invoice-print.html`.
 
@@ -141,13 +141,13 @@ Today the older routes only require sign-in, so a **Read-only** CRM role can edi
 
 ## 6. Phases (each ends with everything still working)
 
-0. **This document, confirmed, plus the guard test** (section 7). No behavior change.
-1. **Edit details pop-up on the person page** (name, company, street, city, state, ZIP, phone: part of E1 and E2), so editing no longer leaves the Customer Hub. *Built 2026-11-23.* The email (it moves the sign-in account's email), ship-to, source, subscription, groups, notes and the account block are not in it yet; the person page links to the older page for those until phases 2 and 3 move them.
-2. **List parity:** L2 to L8, row actions R1 and R2, T2, T4 on `admin-crm-contacts.html`.
-3. **Account block and roles on the person page:** E8 to E12.
-4. **Purchases and licenses on the person page:** P1 to P8 (or links to Licenses per D3).
-5. **One importer:** T3 settled per D2.
-6. **Retire:** redirect, menu and dashboard changes, rewritten tests, docs, release note and help videos re-checked.
+0. **This document and the guard test** (section 7): `docs/reference/contact-pages-feature-map.json` and `server/test/contact-pages-feature-map.test.js`. No behavior change. *Built 2026-11-23.*
+1. **Edit details pop-up on the person page** (name, company, street, city, state, ZIP, phone: part of E1 and E2). *Built 2026-11-23.* The rest of the Edit Contact box is not in it yet; the person page links to the older page for it until phase 3.
+2. **List parity on `admin-crm-contacts.html`:** L1 to L10 (search, group, status, source and label filters, sorting, paging, the column picker with Role and Grade Levels, row buttons), T2 (groups), T4 (export), R1 (subscription toggle), R2 (delete, with every rule above). Server paging (D6). The contact routes work with the Hub off (D7).
+3. **The rest of the person's card:** E1 email (with the sign-in email move and the duplicate-email handling, E13), E3 ship-to, E4 source, E5 subscription, E6 groups, E7 notes, E8 to E12 (site account block, resend verification, password reset, delete account, roles), and T1 (the Hub's **+ Add a person** gets the same fields as the old **+ Add Contact**).
+4. **Purchases and licenses pop-up on the person page:** P1 to P4, P6, and the three seat actions in P7 (assign an email, register directly, free a seat). The `book` purchase type per D10. P5 and P8 stay on the Licenses page.
+5. **One importer:** T3 (the Hub importer gains groups, address, signup date and notes).
+6. **Retire:** first move `createPurchase`, `attachPurchaseDetails` and `assignContactToGroups` out of `routes/newsletter.js` into `server/lib/` (other routes import them, see section 3). Then redirect `admin-newsletter.html`, repoint the **CRM** menu item and the two dashboard buttons (D9), keep the redirect in `mission-control-static-files.txt`, and rewrite the four end-to-end specs. `routes/newsletter.js` itself stays: public sign-up, the unsubscribe link and the Licenses, Quotes, Campaigns, Morning Boost, Orders and School Admins pages still call it.
 
 Each phase is its own commit and deploy. The old page stays fully working until phase 6.
 
@@ -164,7 +164,7 @@ Each phase is its own commit and deploy. The old page stays fully working until 
 |---|---|---|
 | D1 | Target screen | **The Customer Hub pair**: `admin-crm-contacts.html` (list) and `admin-crm-contact.html` (person). `admin-newsletter.html` becomes a redirect only after every row of section 2.2 is proven live on them. |
 | D2 | Which importer survives | **The Hub importer, extended** with the old one's columns (groups, address, signup date, notes), keeping review and undo. The old importer is retired in phase 6. |
-| D3 | Purchases and seats | A **Purchases and licenses pop-up on the person page** (add, edit, mark paid, license dates, delete). Seat work stays on `admin-licenses.html`, with a link from the person page. |
+| D3 | Purchases and seats | A **Purchases and licenses pop-up on the person page** (add, edit, mark paid, delete). License dates, a seat's audiences and the school-domain view stay on `admin-licenses.html`. **Amended 2026-11-23 (found in phase 0, owner to confirm):** the Licenses page does not have assign an email, register directly, or free a seat, so those three move into the pop-up too, or they would be orphaned. |
 | D4 | Roles | **As in section 5.** CRM Admin: everything. Sales: edit details, subscriptions, groups, imports, resend verification and password reset; **not** delete a contact or sign-in account, export the list, or touch purchases and seats. Read-only: look only. |
 | D5 | Read-only can no longer edit | **Accepted** (the older page lets a Read-only role edit and delete today; the merged screens close that). |
 | D6 | Loading | **Server paging**, search and filters on the server (as the Hub list does). Needs indexes on name, email and company. |
@@ -180,3 +180,15 @@ Each phase is its own commit and deploy. The old page stays fully working until 
 - **Large list:** the old page's all-at-once load is fast for staff today; server paging must keep search quick (index on name, email, company).
 - **Per-browser column choice** is lost when the page changes name; the new screen should read the old `localStorage` key once.
 - **The four end-to-end tests** encode today's flows; they are the best checklist of what staff actually do, so they are rewritten rather than deleted.
+
+## 10. Corrections found while building phase 0 (2026-11-23)
+
+Checking every row against the real code found these, all fixed above:
+
+1. **P5 (license dates), P8 (by school domain) and a seat's audiences are not on the older page.** Only `admin-licenses.html` calls them, so they are not part of the merge.
+2. **The Licenses page does not have the three seat actions** (assign an email, register directly, free a seat); only the older page does. D3 said seat work could stay on Licenses; that was wrong for these three. D3 is amended so they move into the person page's pop-up.
+3. **`routes/newsletter.js` is also a library.** `createPurchase` is used by `checkout.js` and `quote-accept.js`, `attachPurchaseDetails` by `site-auth.js` and `invoices.js`; `assignContactToGroups` is exported but only used inside the file. They move to `server/lib/` before the page is retired (phase 6), and the route file itself stays.
+4. **More references to the older page than section 3 listed:** `mission-control-static-files.txt` (the list of static files to deploy), `server/test/crm-pages.test.js`, a comment in `server/scripts/alter-add-quote-school-domain.js`, and comments in two end-to-end specs.
+5. **Delete is bigger than the table said** (R2 above: staff accounts refused, close-account confirmation, CRM Admin erase of CRM items).
+6. **The Edit Contact fields E1 (email), E3 to E7 and the Add Contact form were not assigned to any phase.** They are now phase 3.
+7. **New decision D10 (owner):** the Add Purchase form has a `book` type that loads `/api/books`, but FNE sells no books and the book code is dead. Recommendation: drop the `book` type from the new pop-up, and leave the existing book purchases as they are (the list still shows them). Needs the owner's yes before phase 4.

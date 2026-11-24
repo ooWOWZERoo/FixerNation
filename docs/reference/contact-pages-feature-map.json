@@ -1,0 +1,969 @@
+{
+ "_about": "Guard map for merging admin-newsletter.html into the Customer Hub contact pages. Every function, event wiring, route, export, caller and reference below is checked against the real code by server/test/contact-pages-feature-map.test.js. Features (L1, T1, E1, P1, R1...) are the rows of docs/reference/contact-pages-merge-requirements.md section 2.2. Statuses: planned (moves in the phase named), moved (done: needs a proof), internal (a helper), stays (never removed), none (a comment only), dropped (needs a reason).",
+ "oldPage": "admin-newsletter.html",
+ "routesFile": "server/routes/newsletter.js",
+ "functions": {
+  "esc": {
+   "features": [],
+   "status": "internal",
+   "note": "HTML-escape helper; each new screen uses fnEscape / esc already"
+  },
+  "loadVisibleColumns": {
+   "features": [
+    "L8"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Columns picker; read the saved localStorage choice once (D8)"
+  },
+  "renderTableHead": {
+   "features": [
+    "L8"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Columns picker; read the saved localStorage choice once (D8)"
+  },
+  "renderColumnsMenu": {
+   "features": [
+    "L8"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Columns picker; read the saved localStorage choice once (D8)"
+  },
+  "toggleColumn": {
+   "features": [
+    "L8"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Columns picker; read the saved localStorage choice once (D8)"
+  },
+  "toggleColumnsMenu": {
+   "features": [
+    "L8"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Columns picker; read the saved localStorage choice once (D8)"
+  },
+  "fetchContacts": {
+   "features": [
+    "L7"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Replaced by server paging (D6)"
+  },
+  "fetchGroups": {
+   "features": [
+    "T2",
+    "L2"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "fetchAndRenderContacts": {
+   "features": [
+    "L7"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Replaced by server paging (D6)"
+  },
+  "populateFilterOptions": {
+   "features": [
+    "L2",
+    "L4"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "setSort": {
+   "features": [
+    "L6"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "changePage": {
+   "features": [
+    "L7"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "applyFiltersAndRender": {
+   "features": [
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "L5",
+    "L6",
+    "L7",
+    "L9",
+    "L10"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Also draws every row: the name link to the person page (L9) and the row buttons (L10)"
+  },
+  "toggleStatus": {
+   "features": [
+    "R1"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "deleteContact": {
+   "features": [
+    "R2"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Keep every rule: refuses buyers and staff accounts, confirm_close prompt, CRM Admin erase of CRM items"
+  },
+  "renderGroupCheckboxes": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "renderGroupPills": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "addGroup": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "removeGroup": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "onGroupsSearchInput": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "scheduleHideGroupsDropdown": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "hideGroupsDropdown": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "getCheckedGroupIds": {
+   "features": [
+    "E6"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Groups picker inside the Edit Contact box"
+  },
+  "openContactModal": {
+   "features": [
+    "T1"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Add Contact form"
+  },
+  "editContact": {
+   "features": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Phase 1 already moved name, company, street, city, state, ZIP, phone (Edit details pop-up)"
+  },
+  "closeContactModal": {
+   "features": [
+    "E1"
+   ],
+   "status": "planned",
+   "phase": 3
+  },
+  "saveContact": {
+   "features": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E13",
+    "T1"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "Email change moves the sign-in email; duplicate-email message"
+  },
+  "renderRolesAndAssignments": {
+   "features": [
+    "E12"
+   ],
+   "status": "planned",
+   "phase": 3
+  },
+  "resendVerificationButtonHtml": {
+   "features": [
+    "E9",
+    "L10"
+   ],
+   "status": "planned",
+   "phase": 3
+  },
+  "renderContactAccountField": {
+   "features": [
+    "E8"
+   ],
+   "status": "planned",
+   "phase": 3
+  },
+  "resendVerification": {
+   "features": [
+    "E9"
+   ],
+   "status": "planned",
+   "phase": 3
+  },
+  "sendAccountPasswordReset": {
+   "features": [
+    "E10"
+   ],
+   "status": "planned",
+   "phase": 3
+  },
+  "deleteSiteAccount": {
+   "features": [
+    "E11"
+   ],
+   "status": "planned",
+   "phase": 3
+  },
+  "exportCsv": {
+   "features": [
+    "T4"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "14 columns, respects the current filters (e2e crm-export-respects-filters), CRM Admin only (D4)"
+  },
+  "openGroupsModal": {
+   "features": [
+    "T2"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "closeGroupsModal": {
+   "features": [
+    "T2"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "renderGroupsList": {
+   "features": [
+    "T2"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "createGroup": {
+   "features": [
+    "T2"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "deleteGroup": {
+   "features": [
+    "T2"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "openImportModal": {
+   "features": [
+    "T3"
+   ],
+   "status": "planned",
+   "phase": 5,
+   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+  },
+  "closeImportModal": {
+   "features": [
+    "T3"
+   ],
+   "status": "planned",
+   "phase": 5,
+   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+  },
+  "parseImportInput": {
+   "features": [
+    "T3"
+   ],
+   "status": "planned",
+   "phase": 5,
+   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+  },
+  "confirmImport": {
+   "features": [
+    "T3"
+   ],
+   "status": "planned",
+   "phase": 5,
+   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+  },
+  "fetchBooksForDropdown": {
+   "features": [
+    "P2"
+   ],
+   "status": "planned",
+   "phase": 4,
+   "note": "The book purchase type: see D10 (FNE sells no books)"
+  },
+  "onPurchaseTypeChange": {
+   "features": [
+    "P2"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "fetchPurchases": {
+   "features": [
+    "P1"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "openPurchasesModal": {
+   "features": [
+    "P1"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "closePurchasesModal": {
+   "features": [
+    "P1"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "renderPurchasesList": {
+   "features": [
+    "P1"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "purchaseCard": {
+   "features": [
+    "P1"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "seatRowHtml": {
+   "features": [
+    "P7"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "togglePurchaseEdit": {
+   "features": [
+    "P3"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "savePurchaseEdit": {
+   "features": [
+    "P3"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "markPurchasePaid": {
+   "features": [
+    "P4"
+   ],
+   "status": "planned",
+   "phase": 4,
+   "note": "Always set payment_status explicitly on an already-paid purchase"
+  },
+  "registerSeatDirectly": {
+   "features": [
+    "P7"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "unregisterSeat": {
+   "features": [
+    "P7"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "addPurchase": {
+   "features": [
+    "P2"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "deletePurchase": {
+   "features": [
+    "P6"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "assignSeatEmail": {
+   "features": [
+    "P7"
+   ],
+   "status": "planned",
+   "phase": 4
+  },
+  "crmLabelHtml": {
+   "features": [
+    "L5"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "enableCrmLabel": {
+   "features": [
+    "L5"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "The label column and filter appear only when the Hub is on today; D7 says the merged screens work with it off"
+  },
+  "gradeCodes": {
+   "features": [
+    "L8"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Role and Grade Levels optional columns (D8)"
+  }
+ },
+ "wiring": {
+  "searchInput": {
+   "features": [
+    "L1"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "filterGroup": {
+   "features": [
+    "L2"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "filterStatus": {
+   "features": [
+    "L3"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "filterSource": {
+   "features": [
+    "L4"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "filterClass": {
+   "features": [
+    "L5"
+   ],
+   "status": "planned",
+   "phase": 2
+  },
+  "importFile": {
+   "features": [
+    "T3"
+   ],
+   "status": "planned",
+   "phase": 5
+  },
+  "document": {
+   "features": [
+    "L8"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Click anywhere closes the Columns menu"
+  }
+ },
+ "routes": {
+  "POST /contacts": {
+   "features": [
+    "T1",
+    "E13"
+   ],
+   "pageUrl": "/api/newsletter/contacts",
+   "callers": [
+    "index.html"
+   ],
+   "status": "stays",
+   "note": "Public sign-up form (rate-limited) AND the older Add Contact. The public use never moves."
+  },
+  "GET /contacts": {
+   "features": [
+    "L1"
+   ],
+   "pageUrl": "/api/newsletter/contacts",
+   "callers": [
+    "admin-dashboard.html",
+    "admin-campaigns.html"
+   ],
+   "status": "stays",
+   "note": ""
+  },
+  "GET /contacts/search": {
+   "features": [],
+   "pageUrl": null,
+   "callers": [
+    "admin-quotes.html"
+   ],
+   "status": "stays",
+   "note": "Contact picker on the Quotes page"
+  },
+  "PUT /contacts/:id": {
+   "features": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E13",
+    "R1"
+   ],
+   "pageUrl": "/api/newsletter/contacts/:p",
+   "callers": [],
+   "status": "stays",
+   "note": "Email change moves the sign-in email"
+  },
+  "DELETE /contacts/:id": {
+   "features": [
+    "R2"
+   ],
+   "pageUrl": "/api/newsletter/contacts/:p",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "POST /contacts/:id/resend-verification": {
+   "features": [
+    "E9"
+   ],
+   "pageUrl": "/api/newsletter/contacts/:p/resend-verification",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "GET /contacts/:id/roles": {
+   "features": [
+    "E12"
+   ],
+   "pageUrl": "/api/newsletter/contacts/:p/roles",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "GET /groups": {
+   "features": [
+    "T2",
+    "L2"
+   ],
+   "pageUrl": "/api/newsletter/groups",
+   "callers": [
+    "admin-campaigns.html",
+    "admin-morning-boost-email.html",
+    "admin-licenses.html"
+   ],
+   "status": "stays",
+   "note": "Email groups drive Campaigns, Morning Boost and Licenses"
+  },
+  "POST /groups": {
+   "features": [
+    "T2"
+   ],
+   "pageUrl": "/api/newsletter/groups",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "DELETE /groups/:id": {
+   "features": [
+    "T2"
+   ],
+   "pageUrl": "/api/newsletter/groups/:p",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "GET /unsubscribe": {
+   "features": [],
+   "pageUrl": null,
+   "callers": [
+    "server/lib/mailer.js"
+   ],
+   "status": "stays",
+   "note": "The link in every marketing email. Never removed."
+  },
+  "GET /purchases": {
+   "features": [],
+   "pageUrl": null,
+   "callers": [
+    "admin-orders.html",
+    "admin-school-admins.html"
+   ],
+   "status": "stays",
+   "note": ""
+  },
+  "GET /contacts/:id/purchases": {
+   "features": [
+    "P1"
+   ],
+   "pageUrl": "/api/newsletter/contacts/:p/purchases",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "POST /contacts/:id/purchases": {
+   "features": [
+    "P2"
+   ],
+   "pageUrl": "/api/newsletter/contacts/:p/purchases",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "GET /purchases/by-domain": {
+   "features": [
+    "P8"
+   ],
+   "pageUrl": null,
+   "callers": [
+    "admin-licenses.html"
+   ],
+   "status": "stays",
+   "note": ""
+  },
+  "DELETE /purchases/by-domain": {
+   "features": [
+    "P8"
+   ],
+   "pageUrl": null,
+   "callers": [
+    "admin-licenses.html"
+   ],
+   "status": "stays",
+   "note": ""
+  },
+  "PUT /purchases/:id": {
+   "features": [
+    "P3",
+    "P4"
+   ],
+   "pageUrl": "/api/newsletter/purchases/:p",
+   "callers": [
+    "admin-licenses.html"
+   ],
+   "status": "stays",
+   "note": ""
+  },
+  "PUT /purchases/:id/license-dates": {
+   "features": [
+    "P5"
+   ],
+   "pageUrl": null,
+   "callers": [
+    "admin-licenses.html"
+   ],
+   "status": "stays",
+   "note": ""
+  },
+  "DELETE /purchases/:id": {
+   "features": [
+    "P6"
+   ],
+   "pageUrl": "/api/newsletter/purchases/:p",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  },
+  "PUT /purchases/:purchaseId/seats/:seatId": {
+   "features": [
+    "P7"
+   ],
+   "pageUrl": "/api/newsletter/purchases/:p/seats/:p",
+   "callers": [],
+   "status": "stays",
+   "note": "Assign an email to a seat. Only the older page calls it."
+  },
+  "POST /purchases/:purchaseId/seats/:seatId/register": {
+   "features": [
+    "P7"
+   ],
+   "pageUrl": "/api/newsletter/purchases/:p/seats/:p/register",
+   "callers": [],
+   "status": "stays",
+   "note": "Register directly. Only the older page calls it."
+  },
+  "POST /purchases/:purchaseId/seats/:seatId/unregister": {
+   "features": [
+    "P7"
+   ],
+   "pageUrl": "/api/newsletter/purchases/:p/seats/:p/unregister",
+   "callers": [],
+   "status": "stays",
+   "note": "Free a seat. Only the older page calls it."
+  },
+  "PUT /seats/:seatId/audiences": {
+   "features": [
+    "P7"
+   ],
+   "pageUrl": null,
+   "callers": [
+    "admin-licenses.html"
+   ],
+   "status": "stays",
+   "note": "A seat's audiences: Licenses only"
+  },
+  "POST /contacts/import": {
+   "features": [
+    "T3"
+   ],
+   "pageUrl": "/api/newsletter/contacts/import",
+   "callers": [],
+   "status": "stays",
+   "note": ""
+  }
+ },
+ "externalCalls": {
+  "/api/books?all=true": {
+   "features": [
+    "P2"
+   ],
+   "status": "planned",
+   "phase": 4,
+   "note": "D10: the book purchase type"
+  },
+  "/api/crm/me": {
+   "features": [
+    "L5"
+   ],
+   "status": "planned",
+   "phase": 2,
+   "note": "Tells the older page whether the Hub is on"
+  },
+  "/api/site-auth/site-users/:p": {
+   "features": [
+    "E11"
+   ],
+   "status": "planned",
+   "phase": 3,
+   "note": "DELETE the sign-in account"
+  },
+  "/api/site-auth/site-users/:p/send-password-reset": {
+   "features": [
+    "E10"
+   ],
+   "status": "planned",
+   "phase": 3
+  }
+ },
+ "references": {
+  "admin-nav.js": {
+   "what": "The side-menu item named CRM",
+   "status": "planned",
+   "phase": 6,
+   "note": "Repoint and rename to Contacts (D9)"
+  },
+  "admin-dashboard.html": {
+   "what": "Two buttons: Manage Newsletter Contacts, View All",
+   "status": "planned",
+   "phase": 6,
+   "note": "Repoint to the Contacts list"
+  },
+  "mission-control-static-files.txt": {
+   "what": "The list of static files that are deployed",
+   "status": "planned",
+   "phase": 6,
+   "note": "Keep admin-newsletter.html listed: it becomes the redirect"
+  },
+  "admin-crm-contact.html": {
+   "what": "The note and link on the person card for fields not in the pop-up yet",
+   "status": "planned",
+   "phase": 3,
+   "note": "Remove when the last field has moved"
+  },
+  "server/test/crm-pages.test.js": {
+   "what": "Pins the older page (the label column)",
+   "status": "planned",
+   "phase": 6,
+   "note": "Update when the page is retired"
+  },
+  "server/test/crm-contact-details-edit.test.js": {
+   "what": "Pins the link to the older page and its ?edit= arrival",
+   "status": "planned",
+   "phase": 6,
+   "note": "Remove those two checks at phase 3 or 6"
+  },
+  "server/scripts/alter-add-quote-school-domain.js": {
+   "what": "A comment only",
+   "status": "none",
+   "note": "No dependency"
+  },
+  "tests/e2e/admin-newsletter.spec.ts": {
+   "what": "End-to-end spec for the older page (list, add, edit, delete, groups)",
+   "status": "planned",
+   "phase": 6,
+   "note": "Rewrite against the new screens; it is the best checklist of what staff do"
+  },
+  "tests/e2e/crm-export-respects-filters.spec.ts": {
+   "what": "Export respects the filters (T4)",
+   "status": "planned",
+   "phase": 6,
+   "note": "Rewrite"
+  },
+  "tests/e2e/newsletter-subscribe.spec.ts": {
+   "what": "Public sign-up appears in the contact list",
+   "status": "planned",
+   "phase": 6,
+   "note": "Rewrite to look in the new list"
+  },
+  "tests/e2e/admin-crm-smoke.spec.ts": {
+   "what": "Opens the older page in the Customer Hub smoke run",
+   "status": "planned",
+   "phase": 6,
+   "note": "Repoint"
+  },
+  "tests/e2e/admin-social.spec.ts": {
+   "what": "A comment only",
+   "status": "none",
+   "note": "No dependency"
+  },
+  "tests/e2e/admin-school-admins.spec.ts": {
+   "what": "A comment only",
+   "status": "none",
+   "note": "No dependency"
+  }
+ },
+ "callerFiles": {
+  "admin-campaigns.html": "Uses contacts and groups",
+  "admin-dashboard.html": "Uses the contact count and list",
+  "admin-licenses.html": "Uses groups, purchases by domain, purchase edit, license dates, seat audiences",
+  "admin-morning-boost-email.html": "Uses groups",
+  "admin-orders.html": "Uses the purchases list",
+  "admin-quotes.html": "Uses contact search",
+  "admin-school-admins.html": "Uses the purchases list",
+  "index.html": "Public newsletter sign-up",
+  "server/app.js": "Mounts the router at /api/newsletter",
+  "server/lib/mailer.js": "Builds the unsubscribe link"
+ },
+ "requirers": {
+  "server/app.js": {
+   "uses": [
+    "router"
+   ],
+   "note": "Mounts the routes"
+  },
+  "server/routes/checkout.js": {
+   "uses": [
+    "createPurchase"
+   ],
+   "note": "Card checkout creates the purchase"
+  },
+  "server/routes/quote-accept.js": {
+   "uses": [
+    "createPurchase"
+   ],
+   "note": "Accepting a quote creates the purchase"
+  },
+  "server/routes/site-auth.js": {
+   "uses": [
+    "attachPurchaseDetails"
+   ],
+   "note": "A person's own purchases"
+  },
+  "server/routes/invoices.js": {
+   "uses": [
+    "attachPurchaseDetails"
+   ],
+   "note": "Invoice line items"
+  }
+ },
+ "exports": {
+  "router": {
+   "status": "stays",
+   "note": "The route file stays: public sign-up, unsubscribe and the Licenses, Quotes, Campaigns, Morning Boost, Orders and School Admins pages call it"
+  },
+  "createPurchase": {
+   "status": "planned",
+   "phase": 6,
+   "note": "Move to server/lib/ before the page is retired; checkout.js and quote-accept.js import it"
+  },
+  "attachPurchaseDetails": {
+   "status": "planned",
+   "phase": 6,
+   "note": "Move to server/lib/; site-auth.js and invoices.js import it"
+  },
+  "assignContactToGroups": {
+   "status": "planned",
+   "phase": 6,
+   "note": "Exported but only used inside newsletter.js; move to server/lib/ with the others"
+  }
+ }
+}
