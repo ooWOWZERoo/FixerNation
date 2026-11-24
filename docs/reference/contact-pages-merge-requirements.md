@@ -1,6 +1,6 @@
 # Merging the two contact screens into one: requirements and inventory
 
-Status: **draft for the owner's decisions (2026-11-23). Nothing here is built except phase 1's pop-up, which is a stepping stone.** Per the project's own rule, nothing that touches access, money or accounts is built before the access table (section 5) and the decisions (section 8) are confirmed.
+Status: **decisions D1 to D9 confirmed by the owner on 2026-11-23 (section 8). Phase 1 (the Edit details pop-up) is built; phases 0 and 2 to 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
 
 ## 1. The goal, in the owner's words
 
@@ -158,19 +158,19 @@ Each phase is its own commit and deploy. The old page stays fully working until 
 3. Phase 6 does not start until every row is `moved` and verified in production with `curl` and a signed-in walk-through by the owner.
 4. The public and cross-page routes in section 3 are **never removed by this project**; only their last caller can retire them, and that is a separate decision.
 
-## 8. Decisions needed
+## 8. Decisions (all confirmed 2026-11-23)
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 |---|---|---|
-| D1 | Is the target `admin-crm-contacts.html` (list) plus `admin-crm-contact.html` (person), with the old page redirecting? | Yes |
-| D2 | Two importers exist (old: groups, address, signup date; Hub: review queue and undo). Which survives? | Hub importer, extended with the old one's columns (groups, address, signup date, notes) so nothing is lost |
-| D3 | Purchases and seats: person page, or link to `admin-licenses.html`? | A **Purchases and licenses** pop-up on the person page for add, edit, mark paid, dates and delete; seat work stays in Licenses with a link, since Licenses already owns it by school |
-| D4 | Roles for the table in section 5 (especially: Sales may not delete, export, or touch purchases) | As in section 5 |
-| D5 | Today a Read-only role can edit on the old page. After the merge it cannot. OK? | Yes (this closes a hole) |
-| D6 | Keep client-side "load everything" speed for search, or move to server paging only? | Server paging, as the Hub list already does |
-| D7 | If the Hub switch is turned off, should the contact screens still work? | The merged contact screens work with the Hub off for viewing and editing (they must, or turning it off would lock staff out of contacts); Hub-only panels hide |
-| D8 | Column picker (per browser) and the Role and Grade Levels columns: keep? | Keep the picker; add Role and Grade Levels as optional columns |
-| D9 | Keep the "CRM" menu name, or rename the single screen "Contacts"? | Rename to **Contacts** under the Customer Hub group |
+| D1 | Target screen | **The Customer Hub pair**: `admin-crm-contacts.html` (list) and `admin-crm-contact.html` (person). `admin-newsletter.html` becomes a redirect only after every row of section 2.2 is proven live on them. |
+| D2 | Which importer survives | **The Hub importer, extended** with the old one's columns (groups, address, signup date, notes), keeping review and undo. The old importer is retired in phase 6. |
+| D3 | Purchases and seats | A **Purchases and licenses pop-up on the person page** (add, edit, mark paid, license dates, delete). Seat work stays on `admin-licenses.html`, with a link from the person page. |
+| D4 | Roles | **As in section 5.** CRM Admin: everything. Sales: edit details, subscriptions, groups, imports, resend verification and password reset; **not** delete a contact or sign-in account, export the list, or touch purchases and seats. Read-only: look only. |
+| D5 | Read-only can no longer edit | **Accepted** (the older page lets a Read-only role edit and delete today; the merged screens close that). |
+| D6 | Loading | **Server paging**, search and filters on the server (as the Hub list does). Needs indexes on name, email and company. |
+| D7 | Hub switch off | **The merged contact screens keep working** for viewing and editing; only the Hub-only parts (label, deals, tasks, notes panels) hide. Build note: the contact routes must not answer 404 with the Hub off the way `requireCrm` does; use the `requireCrmRole('<action>')` pattern (works with the Hub off) or an equivalent. |
+| D8 | Columns | **Keep the picker**, add Role and Grade Levels as optional columns, and read the old `localStorage` choice once so a person's saved columns carry over. |
+| D9 | Menu name | **Contacts**, under the Customer Hub group. The top-level "CRM" item and the two dashboard buttons are repointed when the old page is redirected. |
 
 ## 9. Risks to watch
 
