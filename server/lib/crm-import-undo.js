@@ -23,11 +23,13 @@ const labelOf = (key) => REASONS[key] || key;
 // Records one person the import just created. Never throws: before the alter script has run there is no table, and the import must still work (it just cannot be undone).
 async function recordCreated(conn, { batchId, contactId, accountId, viaReviewId = null, row, title = null, today }) {
   try {
-    const [[c]] = await conn.query('SELECT name, email, company, state, phone, status, assigned_admin_id, crm_classification, classification_locked FROM newsletter_contacts WHERE id = ?', [contactId]);
+    const [[c]] = await conn.query('SELECT name, email, company, state, phone, street, city, zip, notes, status, assigned_admin_id, crm_classification, classification_locked FROM newsletter_contacts WHERE id = ?', [contactId]);
     if (!c) return false;
     let events = 0;
     try { const [[e]] = await conn.query('SELECT COUNT(*) AS n FROM crm_classification_events WHERE contact_id = ?', [contactId]); events = Number(e.n); } catch (err) { if (!isMissing(err)) throw err; }
-    const snapshot = { name: c.name || '', company: c.company || '', state: c.state || '', phone: c.phone || '', status: c.status, adminId: c.assigned_admin_id === null || c.assigned_admin_id === undefined ? null : Number(c.assigned_admin_id), label: c.crm_classification || 'suspect', locked: Number(c.classification_locked || 0), events, title: title || null, startedOn: accountId ? today : null };
+    // The email groups the import itself put them in: those are the import's own and do not keep the person from being undone; any other group does.
+    const [gm] = await conn.query('SELECT group_id FROM contact_group_members WHERE contact_id = ?', [contactId]);
+    const snapshot = { name: c.name || '', company: c.company || '', state: c.state || '', phone: c.phone || '', street: c.street || '', city: c.city || '', zip: c.zip || '', notes: c.notes || '', groupIds: gm.map(g => Number(g.group_id)).sort((a, b) => a - b), status: c.status, adminId: c.assigned_admin_id === null || c.assigned_admin_id === undefined ? null : Number(c.assigned_admin_id), label: c.crm_classification || 'suspect', locked: Number(c.classification_locked || 0), events, title: title || null, startedOn: accountId ? today : null };
     await conn.query('INSERT INTO crm_import_people (batch_id, contact_id, email_norm, account_id, via_review_id, snapshot_json) VALUES (?, ?, ?, ?, ?, ?)', [batchId, contactId, norm(c.email), accountId || null, viaReviewId, JSON.stringify(snapshot)]);
     return true;
   } catch (err) { if (isMissing(err)) return false; throw err; }
@@ -45,7 +47,7 @@ async function keepReason(conn, led) {
   if (c.status !== snap.status) return 'subscribed';
   if ((c.crm_classification || 'suspect') !== (snap.label || 'suspect') || Number(c.classification_locked || 0) !== Number(snap.locked || 0)) return 'label_changed';
   if ((c.assigned_admin_id === null || c.assigned_admin_id === undefined ? null : Number(c.assigned_admin_id)) !== (snap.adminId === undefined ? null : snap.adminId)) return 'owner_changed';
-  for (const k of ['name', 'company', 'state', 'phone']) if ((c[k] || '') !== (snap[k] || '')) return 'edited';
+  for (const k of ['name', 'company', 'state', 'phone', 'street', 'city', 'zip', 'notes']) if ((c[k] || '') !== (snap[k] || '')) return 'edited';
   if (c.last_contacted_at || c.first_touch_at || c.latest_touch_at || c.first_touch_source || c.latest_touch_source) return 'contacted';
   for (const t of ['crm_tasks', 'crm_notes', 'crm_attachments', 'crm_appointments']) if (await count(conn, `SELECT COUNT(*) AS n FROM ${t} WHERE contact_id = ?`, [id])) return 'work';
   // A meeting that merely INVITES them keeps them too (the invitation list is a small JSON on the meeting).
@@ -57,7 +59,11 @@ async function keepReason(conn, led) {
   if (await count(conn, 'SELECT COUNT(*) AS n FROM purchases WHERE contact_id = ?', [id]) || await count(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE contact_id = ?', [id])) return 'money';
   if (await count(conn, 'SELECT COUNT(*) AS n FROM quote_requests WHERE contact_id = ? OR LOWER(TRIM(email)) = ?', [id, norm(led.email_norm)])) return 'quote';
   if (await count(conn, 'SELECT COUNT(*) AS n FROM campaign_sends WHERE contact_id = ?', [id]) || await count(conn, 'SELECT COUNT(*) AS n FROM morning_boost_send_recipients WHERE contact_id = ?', [id])) return 'emailed';
-  if (await count(conn, 'SELECT COUNT(*) AS n FROM contact_group_members WHERE contact_id = ?', [id])) return 'in_group';
+  { // groups: exactly the ones the import put them in, no more and no fewer
+    const [gm] = await conn.query('SELECT group_id FROM contact_group_members WHERE contact_id = ?', [id]);
+    const now = gm.map(g => Number(g.group_id)).sort((a, b) => a - b), was = (snap.groupIds || []).map(Number).sort((a, b) => a - b);
+    if (now.join(',') !== was.join(',')) return 'in_group';
+  }
   if (await count(conn, 'SELECT COUNT(*) AS n FROM site_users WHERE LOWER(TRIM(email)) = ?', [norm(led.email_norm)])) return 'has_account';
   if (await count(conn, 'SELECT COUNT(*) AS n FROM crm_import_review WHERE resolved_contact_id = ? AND id <> ?', [id, led.via_review_id || 0])) return 'in_review';
   if (await count(conn, 'SELECT COUNT(*) AS n FROM crm_classification_events WHERE contact_id = ?', [id]) > Number(snap.events || 0)) return 'label_changed';
@@ -120,7 +126,7 @@ async function undo(conn, batchId, { adminId, now }) {
         else {
           const id = Number(led.contact_id);
           // Named on purpose (the foreign keys would remove them too; this does not depend on them being in force).
-          for (const t of ['crm_account_contacts', 'crm_classification_events']) { try { await connection.query(`DELETE FROM ${t} WHERE contact_id = ?`, [id]); } catch (err) { if (!isMissing(err)) throw err; } }
+          for (const t of ['crm_account_contacts', 'crm_classification_events', 'contact_group_members']) { try { await connection.query(`DELETE FROM ${t} WHERE contact_id = ?`, [id]); } catch (err) { if (!isMissing(err)) throw err; } }
           await connection.query('DELETE FROM newsletter_contacts WHERE id = ?', [id]);
           removed++;
         }

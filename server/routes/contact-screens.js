@@ -7,6 +7,7 @@
 //
 // Access: view = list, filters, who-am-I, a person's card and roles; write = edit a person, add a person, groups, subscribe toggle, resend verification, send a password reset (CRM Admin and Sales);
 // export = CSV (CRM Admin); erase = delete a contact, delete a sign-in account (CRM Admin); manage_purchases = add, edit, mark paid or delete a purchase and assign, register or free a seat (CRM Admin).
+// The importer (phase 5): preview, run, the review queue and a queued row's decision are write (view to read); undoing an import is erase (CRM Admin).
 // The older newsletter routes stay as they are for their other callers until each one moves.
 const express = require('express');
 const pool = require('../db/pool');
@@ -23,6 +24,7 @@ const accountActions = require('../lib/contact-account');
 const { matchingContacts } = require('../lib/crm-quotes');
 const cls = require('../lib/crm-classification');
 const P = require('../lib/purchases');
+const IH = require('../lib/crm-import-http'); // the people importer's handlers, shared with the Customer Hub's own routes (routes/crm-import.js)
 
 const router = express.Router();
 
@@ -81,6 +83,17 @@ router.delete('/groups/:id', requireAuth, requireCrmRole('write'), async (req, r
   await crmAudit(req, { action: 'crm_contact_group_deleted', entityType: 'crm_contact_group', entityId: id });
   res.json({ ok: true });
 });
+
+// ---- Import people (phase 5: the one importer, the Customer Hub's extended with the older page's columns) ---------------------------------------------------------------------
+// The rules are in lib/crm-import.js and the handlers in lib/crm-import-http.js; the Customer Hub's own routes (routes/crm-import.js) call the same ones. With the Hub switched off an import
+// leaves the Organization column, the label and the owner alone. Everyone imported is NOT subscribed (no consent is on record), whatever the file says.
+router.post('/import/preview', requireAuth, requireCrmRole('write'), IH.preview);
+router.post('/import/run', requireAuth, requireCrmRole('write'), IH.run);
+router.get('/import/review', requireAuth, requireCrmRole('view'), IH.review);
+router.post('/import/review/:id/resolve', requireAuth, requireCrmRole('write'), IH.resolve);
+router.get('/import/batches', requireAuth, requireCrmRole('view'), IH.batches);
+router.post('/import/batches/:id/undo-preview', requireAuth, requireCrmRole('erase'), IH.undoPreview);
+router.post('/import/batches/:id/undo', requireAuth, requireCrmRole('erase'), IH.undo);
 
 // ---- The list ----------------------------------------------------------------------------------------------------------------------------------------------
 router.get('/', requireAuth, requireCrmRole('view'), async (req, res) => {

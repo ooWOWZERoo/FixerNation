@@ -102,7 +102,7 @@
 
   boot().then(function (me) {
     if (!me) return;
-    if (!hub && st.view !== 'list') st.view = 'list'; // the duplicates, import review and imports tabs are Customer Hub screens
+    if (!hub && st.view === 'duplicates') st.view = 'list'; // Possible duplicates is a Customer Hub screen; Import review and Imports work with the Hub off too
     st.sort = st.sort && SORTS[st.sort] && (hub || HUB_ONLY_SORTS.indexOf(st.sort) < 0) ? st.sort : (hub ? 'changed' : 'signup');
     st.dir = st.dir === 'asc' ? 'asc' : 'desc';
     visible = loadColumns();
@@ -126,9 +126,9 @@
     root.innerHTML = '<div id="cStats"></div><div class="a-card"><div class="a-card-head"><h2>' + (st.view === 'duplicates' ? 'Possible duplicates' : st.view === 'review' ? 'Import review' : st.view === 'imports' ? 'Imports' : 'Contacts') + '</h2>' +
       (st.view === 'list' && C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="manageGroups">Manage groups</button>' : '') +
       (st.view === 'list' && C.can('export') ? '<button type="button" class="a-btn a-btn-outline" id="exportCsv">Export CSV</button>' : '') +
-      (hub && C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="importPeople">Import people</button>' : '') +
+      (C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="importPeople">Import people</button>' : '') +
       (C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addContact">+ Add a person</button>' : '') + '</div>' +
-      (hub ? '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="' + esc(viewHref(v)) + '"' + (st.view === 'list' && viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '<li>' + dupTab + '</li><li>' + reviewTab + '</li><li>' + importsTab + '</li></ul>' : '') +
+      '<ul class="crm-views" aria-label="Saved views">' + (hub ? VIEWS.map(function (v) { return '<li><a href="' + esc(viewHref(v)) + '"' + (st.view === 'list' && viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '<li>' + dupTab + '</li>' : '<li><a href="admin-crm-contacts.html"' + (st.view === 'list' ? ' aria-current="true"' : '') + '>All people</a></li>') + '<li>' + reviewTab + '</li><li>' + importsTab + '</li></ul>' +
       (st.view === 'list' ?
         '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search contacts</label><input type="search" id="fQ" placeholder="Search name, email, phone or company" title="Use * for any run of letters and ? for a single letter. A pattern has to match the whole field." value="' + esc(st.q) + '"></div>' +
         '<label class="crm-sr" for="fGroup">Email group</label><select id="fGroup" class="a-filter-select">' + C.options(groupOptions(), st.group, 'All groups') + '</select>' +
@@ -351,7 +351,8 @@
     return rows;
   }
   var ALIASES = { name: ['name', 'full name', 'contact', 'contact name'], first: ['first name', 'first', 'firstname'], last: ['last name', 'last', 'lastname', 'surname'], email: ['email', 'e-mail', 'email address'],
-    organization: ['organization', 'organisation', 'school', 'district', 'account', 'school or district', 'organization name'], company: ['company'], title: ['title', 'role', 'position', 'job title'], phone: ['phone', 'telephone', 'phone number'], state: ['state'] };
+    organization: ['organization', 'organisation', 'school', 'district', 'account', 'school or district', 'organization name'], company: ['company'], title: ['title', 'role', 'position', 'job title'], phone: ['phone', 'telephone', 'phone number'], state: ['state', 'province'],
+    street: ['street', 'street address', 'address', 'address 1'], city: ['city'], zip: ['zip', 'zip code', 'postal code', 'postcode'], signupDate: ['signup date', 'signup_date', 'signupdate', 'date signed up'], source: ['source'], notes: ['notes', 'note'], groups: ['groups', 'group'] };
   function toRows(table) {
     if (!table.length) return [];
     var head = table[0].map(function (h) { return h.trim().toLowerCase(); }), hasHead = head.indexOf('email') >= 0 || head.indexOf('e-mail') >= 0 || head.indexOf('email address') >= 0;
@@ -361,15 +362,16 @@
     var body = hasHead ? table.slice(1) : table;
     return body.map(function (r) {
       var get = function (k) { return idx[k] === undefined ? '' : (r[idx[k]] || '').trim(); };
-      return { name: get('name') || (get('first') + ' ' + get('last')).trim(), email: get('email'), organization: get('organization'), company: get('company'), title: get('title'), phone: get('phone'), state: get('state') };
+      return { name: get('name') || (get('first') + ' ' + get('last')).trim(), email: get('email'), organization: get('organization'), company: get('company'), title: get('title'), phone: get('phone'), state: get('state'),
+        street: get('street'), city: get('city'), zip: get('zip'), signupDate: get('signupDate'), source: get('source'), notes: get('notes'), groups: get('groups') };
     });
   }
   var DECISION = { new: 'Will be added', exists: 'Already there: only blanks filled in', review: 'Looks like someone already here: goes to Import review', invalid: 'Left out', repeated: 'Left out' };
   function importPeople() {
     C.dialog({
       title: 'Import people', submit: 'Check the list',
-      body: '<p class="crm-small">Choose a CSV file, or paste it below. It needs an email column; name, organization, title, phone and state are used when they are there. Everyone imported becomes a <strong>Suspect</strong> and is <strong>not subscribed</strong> to the newsletter. Nobody already in the CRM is changed except to fill in what was blank, and rows that look like someone already here wait in Import review for you to decide.</p>' +
-        C.field('CSV file', '<input type="file" id="ipFile" accept=".csv,.txt,text/csv,text/plain">', '', 'ipFile') + C.field('Or paste the rows', '<textarea id="ipText" rows="5" placeholder="name,email,organization"></textarea>', '', 'ipText') +
+      body: '<p class="crm-small">Choose a CSV file, or paste it below. Each row needs an email. The file can also have name, organization, company, title, phone, street, city, state, ZIP, signup date, source, notes and groups (put several groups in one cell, separated by |). Everyone imported is <strong>not subscribed</strong> to the newsletter, whatever the file says' + (hub ? ', and starts as a <strong>Suspect</strong>' : '') + '. People already here only get their blanks filled in and are added to the groups named. Rows that look like someone already here wait in Import review for you to decide. You can import up to 400 people at a time.</p>' +
+        C.field('CSV file', '<input type="file" id="ipFile" accept=".csv,.txt,text/csv,text/plain">', '', 'ipFile') + C.field('Or paste the rows', '<textarea id="ipText" rows="5" placeholder="name,email,organization,city,state,groups"></textarea>', '', 'ipText') +
         C.field('Name for this import', '<input type="text" id="ipName" maxlength="120" placeholder="For example, Spring conference list">', 'So you can find these people later.', 'ipName'),
       onSubmit: function (f) {
         var name = f.querySelector('#ipName').value.trim(); if (!name) return 'Give this import a short name.';
@@ -377,7 +379,7 @@
         function go(text) {
           var rows = toRows(parseCsv(text));
           if (!rows.length) return 'There are no rows to import.';
-          return C.api('POST', '/api/crm/import/preview', { rows: rows }).then(function (r) { if (!r.ok) return C.problem(r); confirmImport(name, rows, r.data); });
+          return C.api('POST', '/api/admin/contacts/import/preview', { rows: rows }).then(function (r) { if (!r.ok) return C.problem(r); confirmImport(name, rows, r.data); });
         }
         if (file) { if (file.size > 600000) return 'That file is too big. Import up to 400 people at a time.'; return new Promise(function (resolve) { var fr = new FileReader(); fr.onload = function () { resolve(go(String(fr.result))); }; fr.onerror = function () { resolve('That file could not be read.'); }; fr.readAsText(file); }); }
         if (!pasted.trim()) return 'Choose a file or paste the rows.';
@@ -400,16 +402,18 @@
     var issues = preview.rows.filter(function (r) { return r.decision !== 'new'; }).slice(0, 12);
     C.dialog({
       title: 'Ready to import?', submit: c.new + c.exists + c.review ? 'Import' : null,
-      body: '<p><strong>' + esc(C.num(c.total)) + '</strong> rows: <strong>' + esc(C.num(c.new)) + '</strong> will be added as Suspects, <strong>' + esc(C.num(c.exists)) + '</strong> are already here (only blanks are filled in), <strong>' + esc(C.num(c.review)) + '</strong> look like someone already here and will wait in Import review, and <strong>' + esc(C.num(c.left_out)) + '</strong> are left out.</p>' +
+      body: '<p><strong>' + esc(C.num(c.total)) + '</strong> rows: <strong>' + esc(C.num(c.new)) + '</strong> will be added' + (hub ? ' as Suspects' : '') + ', <strong>' + esc(C.num(c.exists)) + '</strong> are already here (only blanks are filled in), <strong>' + esc(C.num(c.review)) + '</strong> look like someone already here and will wait in Import review, and <strong>' + esc(C.num(c.left_out)) + '</strong> are left out.</p>' +
         (issues.length ? '<table class="a-table" aria-label="Rows that need a look"><thead><tr><th scope="col">Row</th><th scope="col">Email</th><th scope="col">What happens</th></tr></thead><tbody>' + issues.map(function (r) {
           return '<tr><td>' + esc(r.index + 1) + '</td><td>' + esc(r.email || '') + '<div class="crm-small crm-muted">' + esc(r.name || '') + '</div></td><td>' + esc(DECISION[r.decision] || r.decision) + (r.problem ? '<div class="crm-small crm-muted">' + esc(r.problem) + '</div>' : '') + (r.candidates && r.candidates.length ? '<div class="crm-small crm-muted">May be ' + esc(r.candidates.map(function (x) { return (x.name || x.email); }).join(', ')) + '</div>' : '') + '</td></tr>';
         }).join('') + '</tbody></table>' + (c.total > preview.rows.length ? '<p class="crm-small crm-muted">Showing the first rows that need a look.</p>' : '') : '') +
         suggestBlock(preview) +
+        ((preview.missingGroups || []).length ? '<div class="crm-notice"><p style="margin:0 0 6px;">These email groups don\'t exist yet: <strong>' + esc(preview.missingGroups.join(', ')) + '</strong>.</p><label class="crm-check" style="margin:0;"><input type="checkbox" id="ipMakeGroups" checked> Create them so these people get tagged. Untick to import without those tags.</label></div>' : '') +
         '<p class="crm-small crm-muted">Import name: ' + esc(name) + '. Nothing has been changed yet.</p>',
       onSubmit: function (f) {
         // A person's pick of a look-alike account goes with its row; the server only honours a pick that is one of the suggestions it works out itself.
         f.querySelectorAll('[data-pick-row]').forEach(function (sel) { var n = Number(sel.value), i = Number(sel.getAttribute('data-pick-row')); if (n && rows[i]) rows[i].pickedAccountId = n; });
-        return C.api('POST', '/api/crm/import/run', { batchName: name, rows: rows }).then(function (r) { if (!r.ok) return C.problem(r); C.toast(r.data.counts.added + ' added, ' + r.data.counts.already_there + ' already there, ' + r.data.counts.queued + ' to review'); st.view === 'list' ? fetchList() : fetchReview(); }); }
+        var mk = f.querySelector('#ipMakeGroups');
+        return C.api('POST', '/api/admin/contacts/import/run', { batchName: name, rows: rows, createMissingGroups: !!(mk && mk.checked) }).then(function (r) { if (!r.ok) return C.problem(r); C.toast(r.data.counts.added + ' added, ' + r.data.counts.already_there + ' already there, ' + r.data.counts.queued + ' to review' + (r.data.groupsCreated && r.data.groupsCreated.length ? ', ' + r.data.groupsCreated.length + ' group(s) created' : '') + (r.data.groupsSkipped && r.data.groupsSkipped.length ? ', ' + r.data.groupsSkipped.length + ' group(s) skipped' : '')); refreshFacets(); st.view === 'list' ? fetchList() : fetchReview(); }); }
     });
   }
 
@@ -418,7 +422,7 @@
     C.writeQuery({ view: 'review', page: st.page > 1 ? st.page : '' });
     var body = document.getElementById('cBody');
     C.loading(body);
-    C.api('GET', '/api/crm/import/review' + C.qstr({ page: st.page, pageSize: 20 })).then(function (r) {
+    C.api('GET', '/api/admin/contacts/import/review' + C.qstr({ page: st.page, pageSize: 20 })).then(function (r) {
       if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
       if (!r.data.total) { body.innerHTML = C.empty('Nothing is waiting. Rows from an import that look like someone already here will appear on this tab.', '✅'); document.getElementById('cPager').innerHTML = ''; return; }
       body.innerHTML = '<p class="crm-small crm-muted">These rows came from an import and look like someone already in the CRM, so they were not added. Decide each one. "Same person" only fills in what the existing person was missing.</p>' + r.data.items.map(function (it) {
@@ -428,7 +432,7 @@
             return '<li><div><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.id) + '">' + esc(c.name || c.email) + '</a><div class="crm-small crm-muted">' + esc(c.email) + '</div></div>' + (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" data-same="' + esc(it.id) + '" data-contact="' + esc(c.id) + '">Same person</button>' : '') + '</li>';
           }).join('') + '</ul>' + (C.can('write') ? '<div class="crm-row-actions" style="margin-top:8px;"><button type="button" class="a-btn a-btn-outline a-btn-sm" data-diff="' + esc(it.id) + '">Different person: add them</button><button type="button" class="a-btn a-btn-outline a-btn-sm" data-skip="' + esc(it.id) + '">Skip</button></div>' : '') + '</div>';
       }).join('');
-      function decide(id, body2) { C.api('POST', '/api/crm/import/review/' + id + '/resolve', body2).then(function (x) { C.toast(x.ok ? 'Saved' : C.problem(x)); fetchReview(); }); }
+      function decide(id, body2) { C.api('POST', '/api/admin/contacts/import/review/' + id + '/resolve', body2).then(function (x) { C.toast(x.ok ? 'Saved' : C.problem(x)); fetchReview(); }); }
       body.querySelectorAll('[data-same]').forEach(function (b) { b.addEventListener('click', function () { decide(b.getAttribute('data-same'), { action: 'same_person', contactId: Number(b.getAttribute('data-contact')) }); }); });
       body.querySelectorAll('[data-diff]').forEach(function (b) { b.addEventListener('click', function () { decide(b.getAttribute('data-diff'), { action: 'different_person' }); }); });
       body.querySelectorAll('[data-skip]').forEach(function (b) { b.addEventListener('click', function () { decide(b.getAttribute('data-skip'), { action: 'skip' }); }); });
@@ -441,7 +445,7 @@
     C.writeQuery({ view: 'imports' });
     var body = document.getElementById('cBody');
     C.loading(body);
-    C.api('GET', '/api/crm/import/batches').then(function (r) {
+    C.api('GET', '/api/admin/contacts/import/batches').then(function (r) {
       if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
       if (!r.data.batches.length) { body.innerHTML = C.empty('No import has been run yet.', '📥'); return; }
       var canUndo = C.can('erase');
@@ -454,7 +458,7 @@
     });
   }
   function undoImport(id, name) {
-    C.api('POST', '/api/crm/import/batches/' + encodeURIComponent(id) + '/undo-preview', {}).then(function (p) {
+    C.api('POST', '/api/admin/contacts/import/batches/' + encodeURIComponent(id) + '/undo-preview', {}).then(function (p) {
       if (!p.ok) { C.toast(C.problem(p)); return; }
       var d = p.data;
       C.dialog({
@@ -464,7 +468,7 @@
           (d.gone ? '<p class="crm-small crm-muted">' + esc(C.num(d.gone)) + ' are already gone (deleted or merged).</p>' : '') +
           (d.stillWaiting ? '<p class="crm-small crm-muted">' + esc(C.num(d.stillWaiting)) + ' rows from this import are still waiting in Import review; they stay there.</p>' : '') +
           '<p class="crm-small crm-muted">People who were already in the CRM, and the blanks this import filled in for them, are not changed.</p>',
-        onSubmit: function () { return C.api('POST', '/api/crm/import/batches/' + encodeURIComponent(id) + '/undo', { confirm: true }).then(function (r) { if (!r.ok) return C.problem(r); C.toast(r.data.removed + ' removed, ' + r.data.kept + ' kept'); fetchImports(); }); }
+        onSubmit: function () { return C.api('POST', '/api/admin/contacts/import/batches/' + encodeURIComponent(id) + '/undo', { confirm: true }).then(function (r) { if (!r.ok) return C.problem(r); C.toast(r.data.removed + ' removed, ' + r.data.kept + ' kept'); fetchImports(); }); }
       });
     });
   }

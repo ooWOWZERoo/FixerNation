@@ -288,7 +288,8 @@ test('PAGE: the Contacts list asks the merged routes (not the older page\'s), ke
   for (const a of ['data-resend', 'data-sub', 'data-del', '#purchases', '&amp;edit=1']) assert.ok(page.includes(a), `row action ${a}`);
   assert.match(page, /confirm_close/); assert.match(page, /contact_has_crm_items/);
   assert.match(page, /C\.can\('export'\)/); assert.match(page, /C\.can\('erase'\)/);
-  assert.match(page, /hub && C\.can\('write'\)[^;]*importPeople/s, 'Import people is Hub-only for now');
+  assert.match(page, /\(C\.can\('write'\) \? '<button type="button" class="a-btn a-btn-outline" id="importPeople">/, 'Import people shows with the Hub off too (merge phase 5)');
+  assert.doesNotMatch(page, /\/api\/crm\/import/, 'the importer is asked through the merged screen\'s routes');
   // Every handler string with data in it travels in data- attributes, never an inline onclick.
   assert.doesNotMatch(page, /onclick="[a-z]+\(\$\{/);
   const person = read('admin-crm-contact.html');

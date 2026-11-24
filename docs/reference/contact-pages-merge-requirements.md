@@ -1,6 +1,6 @@
 # Merging the two contact screens into one: requirements and inventory
 
-Status: **decisions D1 to D10 confirmed by the owner on 2026-11-23 (section 8). Phases 0, 1 (the Edit details pop-up), 2 (the Contacts list), 3 (the rest of the person's card) and 4 (purchases and seats) are built; phases 5 and 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
+Status: **decisions D1 to D10 confirmed by the owner on 2026-11-23 (section 8). Phases 0, 1 (the Edit details pop-up), 2 (the Contacts list), 3 (the rest of the person's card) 4 (purchases and seats) and 5 (one importer) are built; phase 6 is not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
 
 ## 1. The goal, in the owner's words
 
@@ -147,8 +147,8 @@ Today the older routes only require sign-in, so a **Read-only** CRM role can edi
 2. **List parity on `admin-crm-contacts.html`:** L1 to L11 (search, group, status, source and label filters, sorting, paging, the column picker with Role and Grade Levels, row buttons, the three cards), T2 (groups), T4 (export), R1 (subscription toggle), R2 (delete, with every rule above). Server paging (D6). *Built 2026-11-24* (see section 11 for what it does and what it leaves for later phases).
 3. **The rest of the person's card:** E1 email (with the sign-in email move and the duplicate-email handling, E13), E3 ship-to, E4 source, E5 subscription, E6 groups, E7 notes, E8 to E12 (site account block, resend verification, password reset, delete account, roles), and T1 (+ Add a person with the same fields as the old + Add Contact). The person page works with the Hub off (D7). *Built 2026-11-24* (section 12).
 4. **Purchases and licenses pop-up on the person page:** P1 to P4, P6, and the three seat actions in P7 (assign an email, register directly, free a seat). The `book` purchase type is not carried over (D10). P5 and P8 stay on the Licenses page. *Built 2026-11-24* (section 13).
-5. **One importer:** T3 (the Hub importer gains groups, address, signup date and notes).
-6. **Retire:** first move `createPurchase`, `attachPurchaseDetails` and `assignContactToGroups` out of `routes/newsletter.js` into `server/lib/` (other routes import them, see section 3). Then redirect `admin-newsletter.html`, repoint the **CRM** menu item and the two dashboard buttons (D9), keep the redirect in `mission-control-static-files.txt`, and rewrite the four end-to-end specs. `routes/newsletter.js` itself stays: public sign-up, the unsubscribe link and the Licenses, Quotes, Campaigns, Morning Boost, Orders and School Admins pages still call it.
+5. **One importer:** T3 (the Hub importer gains groups, address, signup date and notes). *Built 2026-11-24* (section 14).
+6. **Retire:** `createPurchase`, `attachPurchaseDetails` and `assignContactToGroups` already moved into `server/lib/purchases.js` in phase 4 (`routes/newsletter.js` re-exports them), so first repoint the routes that require them (`checkout.js`, `quote-accept.js`, `site-auth.js`, `invoices.js`) at the lib and drop the re-export. Then redirect `admin-newsletter.html`, repoint the **CRM** menu item and the two dashboard buttons (D9), keep the redirect in `mission-control-static-files.txt`, and rewrite the four end-to-end specs. `routes/newsletter.js` itself stays: public sign-up, the unsubscribe link and the Licenses, Quotes, Campaigns, Morning Boost, Orders and School Admins pages still call it.
 
 Each phase is its own commit and deploy. The old page stays fully working until phase 6.
 
@@ -246,3 +246,26 @@ Checking every row against the real code found these, all fixed above:
 5. **The older purchase and seat routes still exist** for the older page and the Licenses page until phase 6, with no role check (as before); only the merged screen enforces CRM Admin.
 
 **Still planned:** one importer (phase 5; Import people and + Add a person already work with the Hub on, and Import people must also work with it off), and retiring the older page (phase 6: move `createPurchase` and friends' exports, redirect, repoint the menu item and dashboard buttons, rewrite the four end-to-end specs). License dates, a seat's audiences and the by-school-domain view stay on the Licenses page.
+
+## 14. Phase 5 as built (2026-11-24)
+
+**One importer.** The Customer Hub's importer (decision D2) now also reads the older page's columns: street (or address), city, ZIP, signup date, source, notes and groups (more than one, separated by `|`). It is asked through the merged screen's own routes, so it works with the Hub off. The older page's importer stays until phase 6 and still works.
+
+**Routes added to `routes/contact-screens.js`** (all `requireAuth` + `requireCrmRole`): `POST /import/preview` and `POST /import/run` (write), `GET /import/review` and `GET /import/batches` (view), `POST /import/review/:id/resolve` (write), `POST /import/batches/:id/undo-preview` and `.../undo` (erase, CRM Admin). The handlers are one copy in the new `lib/crm-import-http.js`, also used by the Hub's own `routes/crm-import.js` (unchanged paths, so nothing that calls them breaks); the rules are in `lib/crm-import.js` and `lib/crm-import-undo.js`.
+
+**The rules, kept:** nobody imported is subscribed (a status column in a file is never read); an existing person only has blanks filled, now including street, city, ZIP and notes, and is added to the groups named but never taken out of one; a row that looks like someone already here waits in Import review; a test address is never imported; at most 400 people at a time; the audit row has counts only. **Groups:** a group the file names that does not exist is created only when the person ticks the box in the confirm step (it is ticked by default; unticking imports without those tags). A group tag added to an existing person stays if the import is undone.
+
+**With the Hub off:** the Organization column is not matched to an account (it becomes the person's company text), nobody is made a Suspect or given an owner, no import source tag is written (the source is "Bulk Import"), and everything else is the same. **Import review and Imports** (and their undo) show with the Hub off; **Possible duplicates** stays a Hub-only tab.
+
+**Undo** still works, with one change that matters: the groups an import itself put a person in no longer stop them being undone (the undo previously refused anyone in any group). Any group added by someone else later, or an edit to the address or notes, still keeps the person. The tags are removed with the person.
+
+**Differences from the older importer, all deliberate:**
+1. **New people are not subscribed.** The older importer subscribed every new person; this is D2's consequence (the Hub importer's consent rule survives). A person who really agreed must be subscribed on their card.
+2. **Duplicate-looking rows wait for a person to decide** instead of being added (same mailbox once a +tag is removed, same full name, one letter off). The older importer only matched an exact email.
+3. **400 people at a time** (the older importer had no limit); the file is split and run in parts.
+4. **Source default:** a row's own source is kept; otherwise "Sales CRM import" (Hub on) or "Bulk Import" (Hub off).
+5. **A signup date in the file is used** for a new person when it is a real date (2000 or later, not in the future); a bad date is ignored and does not stop the row.
+
+**Needs one update before the restart:** `node scripts/alter-add-import-review-extra.js` adds `crm_import_review.extra_json` (a text column) so a row waiting in Import review keeps its address, notes, source, signup date and group names. Until it has run, imports still work and a waiting row simply has none of those extras (a test covers this).
+
+**Still planned:** retire the older page (phase 6).

@@ -821,6 +821,7 @@ CREATE TABLE IF NOT EXISTS crm_import_review (
     account_id INT UNSIGNED NULL,
     reason VARCHAR(16) NOT NULL,
     candidates_json TEXT NOT NULL,
+    extra_json TEXT NULL, -- merge phase 5: the rest of the row (street, city, zip, notes, source, signup date, group names); added by scripts/alter-add-import-review-extra.js on existing installs
     state VARCHAR(16) NOT NULL DEFAULT 'waiting',
     resolved_contact_id INT UNSIGNED NULL,
     decided_by_admin_id INT UNSIGNED NULL,

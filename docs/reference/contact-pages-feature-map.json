@@ -440,33 +440,45 @@
    "features": [
     "T3"
    ],
-   "status": "planned",
-   "phase": 5,
-   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+   "status": "moved",
+   "note": "Done in phase 5: Import people, one importer; reads the older page's columns (street, city, ZIP, signup date, source, notes, groups)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function importPeople"
+   }
   },
   "closeImportModal": {
    "features": [
     "T3"
    ],
-   "status": "planned",
-   "phase": 5,
-   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+   "status": "moved",
+   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function confirmImport"
+   }
   },
   "parseImportInput": {
    "features": [
     "T3"
    ],
-   "status": "planned",
-   "phase": 5,
-   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+   "status": "moved",
+   "note": "Done in phase 5: the CSV is read in the browser (parseCsv, toRows) and the server plans it",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function toRows"
+   }
   },
   "confirmImport": {
    "features": [
     "T3"
    ],
-   "status": "planned",
-   "phase": 5,
-   "note": "The Hub importer is extended with groups, address, signup date and notes (D2)"
+   "status": "moved",
+   "note": "Done in phase 5: the confirm step offers to create the email groups the file names that do not exist (the older page asked the same question)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "ipMakeGroups"
+   }
   },
   "fetchBooksForDropdown": {
    "features": [
@@ -719,8 +731,11 @@
    "features": [
     "T3"
    ],
-   "status": "planned",
-   "phase": 5
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"ipFile\""
+   }
   },
   "document": {
    "features": [

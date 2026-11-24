@@ -141,7 +141,7 @@ test('BEFORE THE ALTER SCRIPT: the import and the queue say "not available yet" 
 test('THE PAGE AND THE FILES: the Import people dialog and the Import review tab are wired and escaped, the library never merges or deletes, and the alter script and schema match', () => {
   const read = (f) => fs.readFileSync(path.join(env.SERVER, f), 'utf8');
   const page = read('../admin-crm-contacts.html');
-  for (const k of ['importPeople', 'parseCsv', '/api/crm/import/preview', '/api/crm/import/run', 'fetchReview', 'view=review', 'data-same', 'data-diff', 'Suspect', 'not subscribed']) assert.ok(page.includes(k), k);
+  for (const k of ['importPeople', 'parseCsv', '/api/admin/contacts/import/preview', '/api/admin/contacts/import/run', 'fetchReview', 'view=review', 'data-same', 'data-diff', 'Suspect', 'not subscribed']) assert.ok(page.includes(k), k);
   assert.match(page, /esc\(it\.row\.name \|\| it\.row\.email\)/); assert.match(page, /esc\(c\.name \|\| c\.email\)/); assert.match(page, /esc\(it\.batchName\)/);
   const lib = read('lib/crm-import.js').split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
   assert.doesNotMatch(lib, /DELETE FROM|UPDATE crm_opportunities|UPDATE newsletter_contacts SET (crm_classification|status|assigned_admin_id)|INSERT INTO crm_accounts|mailer|sendMail/i);
