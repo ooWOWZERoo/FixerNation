@@ -198,7 +198,7 @@
       var td = document.createElement('td');
       // the page name comes from our own server, but only ever use it as a plain page on this site
       if (/^[a-z0-9-]+\.html$/.test(l.signIn)) {
-        var a = document.createElement('a'); a.href = l.signIn; a.textContent = 'Open sign-in'; td.appendChild(a);
+        var a = document.createElement('a'); a.href = l.signIn + '?demoUser=' + encodeURIComponent(l.userId); a.textContent = 'Open sign-in'; td.appendChild(a);
       }
       tr.appendChild(td); rows.appendChild(tr);
     });

@@ -35,8 +35,8 @@ const PUBLIC_DEMO_PAGE_READY = true;
 const LOGIN_PAGES = {
   district: 'district-admin-login.html',
   school: 'school-admin-login.html',
-  teacher: 'teacher-classrooms.html',
-  parent: 'parent-portal.html',
+  teacher: 'teacher-login.html', // the sign-in pages themselves: teacher-classrooms.html and parent-portal.html send a signed-out visitor on (or ask them in a pop-up), which would drop the user ID that demo-welcome.html puts in the link
+  parent: 'parent-login.html',
   student: 'student-login.html',
 };
 
