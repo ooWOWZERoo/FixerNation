@@ -7,22 +7,13 @@ const { requireAuth } = require('../middleware/auth');
 const { requireCrm } = require('../lib/crm-permissions');
 const { crmAudit } = require('../lib/crm-audit');
 const cls = require('../lib/crm-classification');
-const { text, posInt, dateOnly, oneOf, paging, likeTerm } = require('../lib/crm-common');
+const { text, posInt, paging } = require('../lib/crm-common');
 const { matchingContacts } = require('../lib/crm-quotes');
 const { attributionView, mergeTouches } = require('../lib/attribution');
 
-const FILT = require('../lib/crm-filters'); // G19: buying role, license status and organization filters
+const LIST = require('../lib/contact-list'); // the list's filters and sort (G19 filters live in lib/crm-filters.js, used from there)
 
 const router = express.Router();
-
-const SORTS = {
-  name: 'c.name',
-  email: 'c.email',
-  classification: 'c.crm_classification',
-  changed: 'c.classification_updated_at',
-  contacted: 'c.last_contacted_at',
-  signup: 'c.signup_date',
-};
 
 function contactRow(c) {
   return {
@@ -39,37 +30,17 @@ function contactRow(c) {
 }
 
 // Server-side paging and filtering (the older contacts page loads everything at once). Test addresses (@example.com) are left out unless asked for.
+// The filters and the sort are built in lib/contact-list.js, shared with the merged Contacts screen (routes/contact-screens.js), so the two ask the same question.
 router.get('/', requireAuth, requireCrm('view'), async (req, res) => {
   const { page, size, offset } = paging(req.query);
-  const where = [];
-  const params = [];
-  const classification = oneOf(req.query.classification, cls.CLASSIFICATIONS);
-  if (classification) { where.push('c.crm_classification = ?'); params.push(classification); }
-  if (req.query.assigned === 'me') { where.push('c.assigned_admin_id = ?'); params.push(req.crm.adminId); }
-  else if (req.query.assigned === 'none') where.push('c.assigned_admin_id IS NULL');
-  else if (posInt(req.query.assigned)) { where.push('c.assigned_admin_id = ?'); params.push(posInt(req.query.assigned)); }
-  const like = likeTerm(req.query.q);
-  if (like) { where.push("(c.name LIKE ? ESCAPE '!' OR c.email LIKE ? ESCAPE '!' OR c.company LIKE ? ESCAPE '!')"); params.push(like, like, like); }
-  if (req.query.includeTest !== 'true') where.push(`NOT (LOWER(TRIM(c.email)) LIKE '%@example.com')`);
-  // G19: more filters. Each is a plain fact (lib/crm-filters.js): who holds a buying role, what licence they have, which organization they are at, and whether their label was set by hand.
-  const today = dateOnly(req.query.today) || new Date().toISOString().slice(0, 10);
-  const extra = [
-    FILT.roleForContact(typeof req.query.role === 'string' ? req.query.role : ''),
-    FILT.licenseForContact(typeof req.query.license === 'string' && FILT.LICENSES.includes(req.query.license) ? req.query.license : '', today),
-    FILT.organizationForContact({ accountId: posInt(req.query.accountId), like: likeTerm(req.query.organization) }),
-  ].filter(Boolean);
-  for (const f of extra) { where.push(f.sql); params.push(...f.params); }
-  if (req.query.locked === 'true') where.push('c.classification_locked = 1');
+  const { where, params } = LIST.buildWhere(req.query, req.crm.adminId);
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const sortKey = SORTS[req.query.sort] ? req.query.sort : 'changed';
-  const dir = req.query.dir === 'asc' ? 'ASC' : 'DESC';
-
   const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM newsletter_contacts c ${w}`, params);
   const [rows] = await pool.query(
     `SELECT c.id, c.name, c.email, c.company, c.state, c.status, c.signup_date, c.crm_classification, c.classification_locked,
             c.classification_updated_at, c.assigned_admin_id, c.last_contacted_at
      FROM newsletter_contacts c ${w}
-     ORDER BY ${SORTS[sortKey]} ${dir}, c.id ${dir} LIMIT ? OFFSET ?`,
+     ${LIST.orderBy(req.query, 'changed')} LIMIT ? OFFSET ?`,
     [...params, size, offset]
   );
   res.json({ contacts: rows.map(contactRow), total: Number(total), page, pageSize: size });

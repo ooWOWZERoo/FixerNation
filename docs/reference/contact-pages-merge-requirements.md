@@ -1,6 +1,6 @@
 # Merging the two contact screens into one: requirements and inventory
 
-Status: **decisions D1 to D10 confirmed by the owner on 2026-11-23 (section 8). Phase 1 (the Edit details pop-up) is built; phases 0 and 2 to 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
+Status: **decisions D1 to D10 confirmed by the owner on 2026-11-23 (section 8). Phases 0, 1 (the Edit details pop-up) and 2 (the Contacts list) are built; phases 3 to 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
 
 ## 1. The goal, in the owner's words
 
@@ -35,6 +35,7 @@ How "100% sure" is achieved (section 7): every control, function, route and link
 | L8 | Column picker: Name, Email, Phone, Company, Address, Signed Up, Source, Status, Role, Grade Levels, Groups, plus the label column; remembered per browser | `localStorage` |
 | L9 | Name links to the Customer Hub person page | link out |
 | L10 | Row buttons: Purchases and Licenses, Edit, Unsubscribe or Resubscribe, Delete, Resend verification | see below |
+| L11 | The three cards above the table: Total Contacts, Subscribed, New This Week (found while building phase 2; it was not in the first list) | browser-side |
 
 **Toolbar**
 
@@ -143,7 +144,7 @@ Today the older routes only require sign-in, so a **Read-only** CRM role can edi
 
 0. **This document and the guard test** (section 7): `docs/reference/contact-pages-feature-map.json` and `server/test/contact-pages-feature-map.test.js`. No behavior change. *Built 2026-11-23.*
 1. **Edit details pop-up on the person page** (name, company, street, city, state, ZIP, phone: part of E1 and E2). *Built 2026-11-23.* The rest of the Edit Contact box is not in it yet; the person page links to the older page for it until phase 3.
-2. **List parity on `admin-crm-contacts.html`:** L1 to L10 (search, group, status, source and label filters, sorting, paging, the column picker with Role and Grade Levels, row buttons), T2 (groups), T4 (export), R1 (subscription toggle), R2 (delete, with every rule above). Server paging (D6). The contact routes work with the Hub off (D7).
+2. **List parity on `admin-crm-contacts.html`:** L1 to L11 (search, group, status, source and label filters, sorting, paging, the column picker with Role and Grade Levels, row buttons, the three cards), T2 (groups), T4 (export), R1 (subscription toggle), R2 (delete, with every rule above). Server paging (D6). *Built 2026-11-24* (see section 11 for what it does and what it leaves for later phases).
 3. **The rest of the person's card:** E1 email (with the sign-in email move and the duplicate-email handling, E13), E3 ship-to, E4 source, E5 subscription, E6 groups, E7 notes, E8 to E12 (site account block, resend verification, password reset, delete account, roles), and T1 (the Hub's **+ Add a person** gets the same fields as the old **+ Add Contact**).
 4. **Purchases and licenses pop-up on the person page:** P1 to P4, P6, and the three seat actions in P7 (assign an email, register directly, free a seat). The `book` purchase type is not carried over (D10). P5 and P8 stay on the Licenses page.
 5. **One importer:** T3 (the Hub importer gains groups, address, signup date and notes).
@@ -193,3 +194,25 @@ Checking every row against the real code found these, all fixed above:
 5. **Delete is bigger than the table said** (R2 above: staff accounts refused, close-account confirmation, CRM Admin erase of CRM items).
 6. **The Edit Contact fields E1 (email), E3 to E7 and the Add Contact form were not assigned to any phase.** They are now phase 3.
 7. **Decision D10 (confirmed by the owner the same day):** the Add Purchase form has a `book` type that loads `/api/books`, but FNE sells no books and the book code is dead. The new pop-up drops the `book` type; existing book purchases stay and still show in the list.
+
+## 11. Phase 2 as built (2026-11-24)
+
+**Where it lives.** `routes/contact-screens.js` (mounted at `/api/admin/contacts`) is the merged screen's server side. It is deliberately **not** a `crm-*.js` file: every `crm-*` route answers 404 with the Hub switched off, and a test (`crm-hardening`) requires them all to use `requireCrm`. This file uses `requireCrmRole`, which keeps the same role matrix and works with the Hub off (D7). A test checks every route in it is written that way. `lib/contact-list.js` builds the filters, the sort, the page of people and the CSV; the Hub's own list (`GET /api/crm/contacts`) now uses the same builder, so the two ask the same question.
+
+**Routes (all `requireAuth` plus `requireCrmRole`):** `GET /access` (view; role, permissions and whether the Hub is on), `GET /` (view; the list), `GET /facets` (view; groups with head counts and the sources in use), `GET /export` (export), `GET|POST|DELETE /groups` (view, write, write), `PUT /:id/subscription` (write), `POST /:id/resend-verification` (write), `DELETE /:id` (erase, CRM Admin only). The delete rules and the resend are one copy in `lib/contact-actions.js`, called by both this file and the older routes in `routes/newsletter.js` (which keep working, unchanged in behavior, for the older page until phase 6).
+
+**Differences from the older page, all deliberate:**
+1. **Test addresses (`@example.com`) are left out** of the list, the three cards and the export unless "Include test addresses" is ticked (the Hub's rule; the older page showed them).
+2. **Sorting by Grade Levels** sorts by the lowest level a person teaches (elementary first); people with none sort as blank. The older page sorted the letters ("ES MS") as text.
+3. **The export** is built on the server so it covers every page of the filtered list; dates are `YYYY-MM-DD` (the importer reads that format back); a cell that starts like a spreadsheet formula (`=`, `@`, or `+`/`-` followed by more than a number) is prefixed with an apostrophe so a name typed into the public sign-up form cannot run in Excel. It is audited (`crm_contacts_exported`: a count and the names of the filters used, never the search text), and capped at 20,000 rows.
+4. **A built-in group** (one with a `system_key`, like Teachers) can no longer be deleted from the list; the older page let it, which silently stopped purchases filing new buyers. Group changes are audited.
+5. **The resend-verification button** shows on a row only when the person has a sign-in account that is not verified (the older page showed it on every row and told you why it could not send).
+6. **Delete asks in a pop-up**, not a browser alert, and every refusal and confirmation the older page had is still there: a buyer, a person on a deal, a staff account, `confirm_close`, and CRM notes with a CRM Admin's confirm.
+7. **The search box** also takes phone numbers, and `*` or `?` still make it a whole-field wildcard.
+8. **D6 indexes:** the plan said server paging needs indexes on name, email and company. A search that matches anywhere in a word (`LIKE '%x%'`) cannot use an index, and with about 4,500 contacts the list answers instantly without them, so none was added. Revisit if the table grows by an order of magnitude.
+
+**Not done in phase 2, carried forward (nothing is lost; each is on the map as planned):**
+- **The person page still needs the Hub on** (`GET /api/crm/contacts/:id` and its panels use `requireCrm`). D7 says it must work with the Hub off for viewing and editing; that is built with the person card in **phase 3**, together with E1 to E13.
+- **Import people** and **+ Add a person** are Customer Hub routes and only show while the Hub is on. T1 is phase 3, the importer is phase 5; both must also be made to work with the Hub off then.
+- **The Purchases and licenses button** on a row opens the person page at its read-only purchases table; the real pop-up with add, edit, mark paid, delete and the three seat actions is phase 4. **The Edit button** opens the person page with the Edit details pop-up over it (name, company, address, phone); the email, ship-to, source, groups, notes and site-account parts are phase 3.
+- **The older page is untouched** and still works for everything; nothing is retired before phase 6.

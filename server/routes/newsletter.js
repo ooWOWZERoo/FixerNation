@@ -4,18 +4,16 @@ const { cleanParty } = require('../lib/invoice-parties');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
 const { unsubscribeToken, sendVerificationEmail, esc } = require('../lib/mailer');
 const crypto = require('crypto');
-const { createToken } = require('../lib/site-tokens');
 const { fireAutomation } = require('../lib/automations');
 const { attributePurchase } = require('../lib/affiliate-attribution');
 const { limiter, clientIp } = require('../lib/rate-limit');
 const { notAdminSeatClause } = require('../lib/seat-counts');
 const { RENEWED_STATUSES, restoreExpiredSeats } = require('../lib/seat-renewal');
 const { claimForAccountByEmail } = require('../lib/own-seat-claim');
-const { describeConsequences, consequencesText, hasRoles, closeAccount } = require('../lib/account-closing');
-const { dealCountForContact, workItemCountForContact } = require('../lib/crm-ownership');
 const { loadCrmRole, can } = require('../lib/crm-permissions');
 const { audit } = require('../lib/audit');
 const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch from the fn_attr cookie, advisory only
+const { deleteContact: deleteContactAction, resendVerification: resendVerificationAction } = require('../lib/contact-actions'); // shared with routes/contact-screens.js
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Suspect / Prospect / Customer after a purchase changes (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
@@ -254,109 +252,17 @@ router.put('/contacts/:id', requireAuth, async (req, res) => {
   res.json({ contact: serialize(contact), accountEmailUpdated: !!accountToMove });
 });
 
+// The rules for deleting a contact (a buyer is refused, a person on a deal is refused, CRM items need a CRM Admin to confirm, a sign-in account is closed) live in
+// lib/contact-actions.js, shared with the merged Contacts screen (routes/contact-screens.js).
 router.delete('/contacts/:id', requireAuth, async (req, res) => {
-  // purchases and invoices are deleted with their contact (ON DELETE CASCADE), and a purchase takes every license seat on it
-  // along. A buyer's contact is therefore never deleted from here: remove or cancel what it owns first.
-  const [[owned]] = await pool.query(
-    'SELECT (SELECT COUNT(*) FROM purchases WHERE contact_id = ?) AS purchases, (SELECT COUNT(*) FROM invoices WHERE contact_id = ?) AS invoices',
-    [req.params.id, req.params.id]
-  );
-  const nPurchases = Number(owned.purchases), nInvoices = Number(owned.invoices);
-  if (nPurchases || nInvoices) {
-    const parts = [];
-    if (nPurchases) parts.push(`${nPurchases} purchase${nPurchases === 1 ? '' : 's'}`);
-    if (nInvoices) parts.push(`${nInvoices} invoice${nInvoices === 1 ? '' : 's'}`);
-    return res.status(409).json({
-      code: 'contact_owns_purchases', purchases: nPurchases, invoices: nInvoices,
-      error: `This contact owns ${parts.join(' and ')}. Deleting it would erase them and every license seat on them. Remove or cancel those first.`,
-    });
-  }
-  // Sales CRM: a contact on a live deal (buying committee or primary contact) is taken off the deal first, never deleted out from under it.
-  const nDeals = await dealCountForContact(pool, req.params.id);
-  if (nDeals) {
-    return res.status(409).json({
-      code: 'contact_on_deals', deals: nDeals,
-      error: `This contact is on ${nDeals} sales deal${nDeals === 1 ? '' : 's'}. Take them off the deal${nDeals === 1 ? '' : 's'} first.`,
-    });
-  }
-  // Sales CRM phase 3: notes, tasks, files and meetings written on this contact would be deleted with it. By default that is refused (merge the person into another contact,
-  // which moves them, or clear them first). Punch list S12: a CRM Admin who really needs the person gone (an erasure request) confirms with `confirmEraseCrmItems: true`,
-  // and the items go with them: the database rows by the foreign keys, the stored files from disk here. Only items filed on THIS contact; anything on a deal or an
-  // account that merely mentions them stays.
-  const nWork = await workItemCountForContact(pool, req.params.id);
-  let erasedFiles = [];
-  if (nWork) {
-    const wants = !!(req.body && req.body.confirmEraseCrmItems === true);
-    if (!wants) {
-      return res.status(409).json({
-        code: 'contact_has_crm_items', items: nWork,
-        error: `This contact has CRM notes, tasks, files or meetings on record (${nWork} in all). Deleting the contact would erase them. Merge the contact into another one in the Customer Hub, or remove those first. A CRM Admin can erase them together with the person.`,
-      });
-    }
-    const role = await loadCrmRole(req.user.userId);
-    if (!can(role, 'erase')) return res.status(403).json({ code: 'erase_needs_crm_admin', error: 'Only a CRM Admin can erase a person together with their CRM notes, tasks, files and meetings.' });
-    const [files] = await pool.query('SELECT stored_name FROM crm_attachments WHERE contact_id = ?', [req.params.id]);
-    erasedFiles = files.map(f => f.stored_name);
-  }
-  // The CRM is the record of who is on the platform: deleting a contact that has a sign-in account closes the account
-  // (lib/account-closing.js, docs/reference/crm-record-of-truth-requirements.md rule B). Staff confirm first when the account holds a
-  // seat or a role; a staff account (role admin, or marked is_fne_staff) is never closed this way.
-  const [[contact]] = await pool.query('SELECT email FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-  if (!contact) return res.status(404).json({ error: 'Contact not found' });
-  const [[account]] = await pool.query(
-    'SELECT id, first_name, last_name, role, is_fne_staff, closed_at FROM site_users WHERE LOWER(email) = LOWER(?)', [contact.email]);
-  let closing = false;
-  if (account && !account.closed_at) {
-    if (account.role === 'admin' || Number(account.is_fne_staff)) {
-      return res.status(409).json({ code: 'staff_account', error: 'This contact is a Fixer Nation staff account and cannot be removed here.' });
-    }
-    const consequences = await describeConsequences(pool, account.id);
-    if (hasRoles(consequences) && !(req.body && req.body.confirmClose === true)) {
-      return res.status(409).json({ code: 'confirm_close', consequences, error: consequencesText([account.first_name, account.last_name].filter(Boolean).join(' '), consequences) });
-    }
-    closing = true;
-  }
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    if (closing) await closeAccount(connection, account.id, { actorType: 'admin', actorId: req.user && req.user.userId, reason: 'crm_contact_deleted' });
-    // Erased on purpose (the foreign keys would remove them too; naming them here makes the erasure explicit and does not depend on the keys being in force).
-    if (nWork) for (const table of ['crm_notes', 'crm_tasks', 'crm_attachments', 'crm_appointments']) await connection.query(`DELETE FROM ${table} WHERE contact_id = ?`, [req.params.id]);
-    await connection.query('DELETE FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-    await connection.commit();
-  } catch (err) {
-    await connection.rollback();
-    throw err;
-  } finally {
-    connection.release();
-  }
-  if (nWork) {
-    const F = require('../lib/crm-files');
-    for (const name of erasedFiles) { const full = F.pathFor(name); if (full) { try { require('fs').unlinkSync(full); } catch { /* already gone */ } } }
-    // Counts only: no name and no email goes into the log.
-    await audit(pool, { actorType: 'admin', actorId: req.user.userId, actorEmail: req.user.username, action: 'crm_contact_erased_with_items', entityType: 'crm_contact', entityId: Number(req.params.id), newValue: { items: nWork, files: erasedFiles.length } });
-  }
-  res.json({ ok: true, accountClosed: closing, erasedItems: nWork });
+  const r = await deleteContactAction(req.params.id, req.body, req.user);
+  res.status(r.status).json(r.body);
 });
 
-// Ad-hoc admin-triggered resend of the site-account verification email,
-// looked up by the contact's email — unlike the public self-service
-// /api/site-auth/resend-verification, this is authenticated and gives the
-// admin a specific reason when it can't send (no account / already verified).
+// Ad-hoc admin-triggered resend of the sign-in account's verification email (lib/contact-actions.js, shared with the merged Contacts screen).
 router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) => {
-  const [contactRows] = await pool.query('SELECT email FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-  const contact = contactRows[0];
-  if (!contact) return res.status(404).json({ error: 'Contact not found' });
-
-  const [userRows] = await pool.query('SELECT id, first_name, email_verified FROM site_users WHERE email = ?', [contact.email]);
-  const user = userRows[0];
-  if (!user) return res.status(404).json({ error: 'No account is registered for this email' });
-  if (user.email_verified) return res.status(400).json({ error: 'This account is already verified' });
-
-  const verifyToken = await createToken(user.id, 'verify', 24 * 60 * 60 * 1000);
-  const verifyUrl = `${process.env.SITE_URL || ''}/api/site-auth/verify?token=${verifyToken}`;
-  await sendVerificationEmail({ to: contact.email, firstName: user.first_name, verifyUrl });
-  res.json({ ok: true });
+  const r = await resendVerificationAction(req.params.id);
+  res.status(r.status).json(r.body);
 });
 
 // GET /api/newsletter/contacts/:id/roles — everything role-specific about

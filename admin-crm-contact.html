@@ -56,6 +56,7 @@
     C.staff().then(function (list) { staff = list; load(); });
   });
 
+  var editOpened = false, scrolled = false;
   function load() {
     C.loading(root);
     C.api('GET', '/api/crm/contacts/' + id).then(function (r) {
@@ -93,7 +94,7 @@
       '</div>';
 
     // Why a purchase does or does not count
-    h += '<div class="a-card"><div class="a-card-head"><h2>Purchases and the Customer rule</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">A purchase makes someone a Customer only when all three checks pass. An accepted quote, an invoice or a PO number does not count on its own.</p>';
+    h += '<div class="a-card" id="purchases"><div class="a-card-head"><h2>Purchases and the Customer rule</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">A purchase makes someone a Customer only when all three checks pass. An accepted quote, an invoice or a PO number does not count on its own.</p>';
     h += data.purchases.length ? '<table class="a-table crm-check-table" aria-label="Purchases and whether each one counts"><thead><tr><th scope="col">Purchase</th><th scope="col">Paid?</th><th scope="col">Amount over $0?</th><th scope="col">Not a trial?</th><th scope="col">Counts?</th></tr></thead><tbody>' +
       data.purchases.map(function (p) {
         var paid = p.paymentStatus === 'paid', amt = p.amountCents !== null && p.amountCents > 0;
@@ -129,6 +130,10 @@
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
     on('#editDetails', editDetails);
+    // The Contacts list's pencil opens this page with ?edit=1: the Edit details pop-up comes up over the person's page (once), and the person page stays behind it.
+    if (!editOpened && new URLSearchParams(window.location.search).get('edit') === '1' && C.can('write')) { editOpened = true; editDetails(); }
+    // The list's receipt button links to #purchases; the page draws after it loads, so scroll once it is there.
+    if (!scrolled && window.location.hash === '#purchases' && document.getElementById('purchases')) { scrolled = true; document.getElementById('purchases').scrollIntoView(); }
     on('#promote', promote); on('#override', override); on('#release', release); on('#mergeC', mergeContact);
     on('#recheck', function () { C.api('POST', '/api/crm/contacts/' + id + '/reconcile', {}).then(function (r) { if (!r.ok) { C.toast(C.problem(r)); return; } C.toast(r.data.changed ? 'The label changed' : r.data.needsReview ? 'Their purchase no longer qualifies. Take a look.' : 'Still the same'); load(); }); });
     var ow = document.getElementById('ownerSel');

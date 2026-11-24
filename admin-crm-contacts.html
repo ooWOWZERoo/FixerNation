@@ -12,6 +12,18 @@
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=23">
 <link rel="stylesheet" href="crm-common.css?v=3">
+<style>
+.fn-columns-wrap{position:relative;}
+.fn-columns-menu{position:absolute; top:calc(100% + 6px); right:0; background:var(--a-card); border:1px solid var(--a-border); border-radius:10px; box-shadow:var(--a-shadow); padding:10px 14px; z-index:50; min-width:190px;}
+.fn-columns-menu[hidden]{display:none;}
+.fn-columns-menu label{display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 0; cursor:pointer; white-space:nowrap;}
+.fn-columns-menu label input{margin:0;}
+.a-row-actions a.a-icon-btn{text-decoration:none;}
+.fn-table-scroll{overflow-x:auto;}
+.fn-table-scroll .a-row-actions{flex-wrap:nowrap;}
+.fn-sort{background:none; border:0; padding:0; font:inherit; font-weight:inherit; color:inherit; cursor:pointer; text-align:left;}
+.fn-sort:hover, .fn-sort:focus-visible{color:var(--a-accent);}
+</style>
 </head>
 <body class="fn-mission-admin">
 
@@ -39,70 +51,286 @@
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
   var q = C.readQuery();
   var staff = [];
-  var st = { view: q.view === 'duplicates' ? 'duplicates' : q.view === 'review' ? 'review' : q.view === 'imports' ? 'imports' : 'list', q: q.q || '', classification: q.classification || '', assigned: q.assigned || '', role: q.role || '', license: q.license || '', organization: q.organization || '', accountId: q.accountId || '', locked: q.locked === 'true', sort: q.sort || 'changed', dir: q.dir || 'desc', test: q.includeTest === 'true', page: Math.max(1, Number(q.page) || 1) };
+  var hub = true; // whether the Customer Hub's own parts (label, owner, deals, notes, import) are switched on; set from /api/admin/contacts/access (the merged screen works with it off)
+  var facets = { groups: [], sources: [] };
+  var st = { view: q.view === 'duplicates' ? 'duplicates' : q.view === 'review' ? 'review' : q.view === 'imports' ? 'imports' : 'list', q: q.q || '', classification: q.classification || '', assigned: q.assigned || '', role: q.role || '', license: q.license || '', organization: q.organization || '', accountId: q.accountId || '', locked: q.locked === 'true', group: q.group || '', status: q.status || '', source: q.source || '', sort: q.sort || '', dir: q.dir || '', test: q.includeTest === 'true', page: Math.max(1, Number(q.page) || 1) };
   var VIEWS = [['All people', {}], ['Suspects', { classification: 'suspect' }], ['Prospects', { classification: 'prospect' }], ['Customers', { classification: 'customer' }], ['Mine', { assigned: 'me' }], ['No owner', { assigned: 'none' }]];
   var ROLES = { champion: 'Champion', decision_maker: 'Decision maker', procurement: 'Procurement', finance: 'Finance' };
   var LICENSES = { paid: 'Has a live paid license', trial: 'Has a live trial', ended_trial: 'Only an ended trial', none: 'No license or trial' };
-  var SORTS = { changed: 'Label changed', name: 'Name', email: 'Email', contacted: 'Last contacted', signup: 'Signed up' };
+  var SORTS = { changed: 'Label changed', name: 'Name', email: 'Email', company: 'Company', contacted: 'Last contacted', signup: 'Signed up', source: 'Source', status: 'Email list', role: 'Role', grade: 'Grade levels' };
+  var HUB_ONLY_SORTS = ['changed', 'contacted'];
+  var STATUSES = { Subscribed: 'Subscribed', Unsubscribed: 'Unsubscribed' };
+  var LABELS = { suspect: 'Suspect', prospect: 'Prospect', customer: 'Customer' };
+  var ROLE_LABELS_SHORT = { teacher: 'Teacher', school_license_admin: 'School Admin', district_admin: 'District Admin', admin: 'FNE Admin', parent: 'Parent', affiliate: 'Affiliate' };
+  var GRADE_CODES = { 'Elementary School': 'ES', 'Middle School': 'MS', 'High School': 'HS', 'Higher Education': 'HE' };
 
-  C.boot(root).then(function (me) {
+  // The columns a person can show (the Columns button). `sort` is the server sort the heading uses; `hub` columns need the Customer Hub on.
+  var COLUMNS = [
+    { key: 'name', label: 'Name', sort: 'name' }, { key: 'email', label: 'Email', sort: 'email' }, { key: 'label', label: 'Label', hub: true }, { key: 'phone', label: 'Phone' },
+    { key: 'company', label: 'Company', sort: 'company' }, { key: 'address', label: 'Address' }, { key: 'owner', label: 'Owner', hub: true }, { key: 'contacted', label: 'Last contacted', sort: 'contacted', hub: true },
+    { key: 'signupDate', label: 'Signed Up', sort: 'signup' }, { key: 'source', label: 'Source', sort: 'source' }, { key: 'status', label: 'Email list', sort: 'status' },
+    { key: 'role', label: 'Role', sort: 'role' }, { key: 'gradeLevels', label: 'Grade Levels', sort: 'grade' }, { key: 'groups', label: 'Groups' }
+  ];
+  var COLUMNS_KEY = 'fnContactsColumnsV2', OLD_COLUMNS_KEY = 'fnContactsVisibleColumns'; // the older CRM page's saved choice is read once (decision D8)
+  var visible = [];
+  function colAvailable(c) { return !c.hub || hub; }
+  function loadColumns() {
+    var keys = COLUMNS.map(function (c) { return c.key; }), saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem(COLUMNS_KEY));
+      if (!Array.isArray(saved) || !saved.length) {
+        saved = JSON.parse(localStorage.getItem(OLD_COLUMNS_KEY));
+        if (Array.isArray(saved) && saved.length) localStorage.setItem(COLUMNS_KEY, JSON.stringify(saved));
+      }
+    } catch (e) { saved = null; }
+    var out = Array.isArray(saved) ? saved.filter(function (k) { return keys.indexOf(k) >= 0; }) : [];
+    if (!out.length) out = hub ? ['name', 'label', 'company', 'owner', 'contacted', 'status'] : ['name', 'email', 'phone', 'company', 'address', 'signupDate', 'source', 'status', 'role', 'gradeLevels', 'groups'];
+    return out;
+  }
+
+  // Sign-in check, then who I am from the merged screen's own route (it answers with the Hub off; the Hub's own routes answer 404 then).
+  function boot() {
+    if (typeof fnRequireAuth === 'function') fnRequireAuth();
+    return C.api('GET', '/api/admin/contacts/access').then(function (r) {
+      if (r.ok) { C.perms = r.data.permissions || {}; C.role = r.data.role; C.adminId = r.data.adminId; hub = !!r.data.hubEnabled; return r.data; }
+      var msg = r.status === 403 ? 'Your login does not have a Customer Hub role yet. A CRM Admin can give you one.' : r.status === 503 ? 'The Customer Hub is not set up on this server yet.' : 'The contact list could not be reached. Try again in a moment.';
+      root.innerHTML = '<div class="a-card"><div class="a-empty"><div class="big" aria-hidden="true">🔒</div><p>' + esc(msg) + '</p></div></div>';
+      return null;
+    });
+  }
+
+  boot().then(function (me) {
     if (!me) return;
-    C.staff().then(function (list) { staff = list; shell(); st.view === 'duplicates' ? fetchDupes() : st.view === 'review' ? fetchReview() : st.view === 'imports' ? fetchImports() : fetchList(); });
+    if (!hub && st.view !== 'list') st.view = 'list'; // the duplicates, import review and imports tabs are Customer Hub screens
+    st.sort = st.sort && SORTS[st.sort] && (hub || HUB_ONLY_SORTS.indexOf(st.sort) < 0) ? st.sort : (hub ? 'changed' : 'signup');
+    st.dir = st.dir === 'asc' ? 'asc' : 'desc';
+    visible = loadColumns();
+    Promise.all([hub ? C.staff() : Promise.resolve([]), C.api('GET', '/api/admin/contacts/facets')]).then(function (res) {
+      staff = res[0] || []; if (res[1].ok) facets = res[1].data;
+      shell(); st.view === 'duplicates' ? fetchDupes() : st.view === 'review' ? fetchReview() : st.view === 'imports' ? fetchImports() : fetchList();
+    });
   });
 
   function viewHref(v) { return 'admin-crm-contacts.html' + C.qstr(v[1]); }
   function viewActive(v) { return (v[1].classification || '') === st.classification && (v[1].assigned || '') === st.assigned; }
 
+  function groupOptions() { var m = {}; facets.groups.forEach(function (g) { m[g.id] = g.name; }); return m; }
+  function sourceOptions() { var m = {}; facets.sources.forEach(function (s) { m[s] = s; }); return m; }
+  function sortOptions() { var m = {}; Object.keys(SORTS).forEach(function (k) { if (hub || HUB_ONLY_SORTS.indexOf(k) < 0) m[k] = SORTS[k]; }); return m; }
+
   function shell() {
     var dupTab = '<a href="admin-crm-contacts.html?view=duplicates"' + (st.view === 'duplicates' ? ' aria-current="true"' : '') + '>Possible duplicates</a>';
     var reviewTab = '<a href="admin-crm-contacts.html?view=review"' + (st.view === 'review' ? ' aria-current="true"' : '') + '>Import review</a>'; // G22
     var importsTab = '<a href="admin-crm-contacts.html?view=imports"' + (st.view === 'imports' ? ' aria-current="true"' : '') + '>Imports</a>'; // follow-up to G22: what each import did, and undo
-    root.innerHTML = '<div class="a-card"><div class="a-card-head"><h2>' + (st.view === 'duplicates' ? 'Possible duplicates' : st.view === 'review' ? 'Import review' : st.view === 'imports' ? 'Imports' : 'Contacts') + '</h2>' +
-      (C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="importPeople">Import people</button>' : '') +
-      (C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addContact">+ Add a person</button>' : '') + '</div>' +
-      '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="' + esc(viewHref(v)) + '"' + (st.view === 'list' && viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '<li>' + dupTab + '</li><li>' + reviewTab + '</li><li>' + importsTab + '</li></ul>' +
+    root.innerHTML = '<div id="cStats"></div><div class="a-card"><div class="a-card-head"><h2>' + (st.view === 'duplicates' ? 'Possible duplicates' : st.view === 'review' ? 'Import review' : st.view === 'imports' ? 'Imports' : 'Contacts') + '</h2>' +
+      (st.view === 'list' && C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="manageGroups">Manage groups</button>' : '') +
+      (st.view === 'list' && C.can('export') ? '<button type="button" class="a-btn a-btn-outline" id="exportCsv">Export CSV</button>' : '') +
+      (hub && C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="importPeople">Import people</button>' : '') +
+      (hub && C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addContact">+ Add a person</button>' : '') + '</div>' +
+      (hub ? '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="' + esc(viewHref(v)) + '"' + (st.view === 'list' && viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '<li>' + dupTab + '</li><li>' + reviewTab + '</li><li>' + importsTab + '</li></ul>' : '') +
       (st.view === 'list' ?
-        '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search contacts</label><input type="search" id="fQ" placeholder="Search by name, email or company" value="' + esc(st.q) + '"></div>' +
+        '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search contacts</label><input type="search" id="fQ" placeholder="Search name, email, phone or company" title="Use * for any run of letters and ? for a single letter. A pattern has to match the whole field." value="' + esc(st.q) + '"></div>' +
+        '<label class="crm-sr" for="fGroup">Email group</label><select id="fGroup" class="a-filter-select">' + C.options(groupOptions(), st.group, 'All groups') + '</select>' +
+        '<label class="crm-sr" for="fStatus">Email list status</label><select id="fStatus" class="a-filter-select">' + C.options(STATUSES, st.status, 'All statuses') + '</select>' +
+        '<label class="crm-sr" for="fSource">Source</label><select id="fSource" class="a-filter-select">' + C.options(sourceOptions(), st.source, 'All sources') + '</select>' +
+        (hub ? '<label class="crm-sr" for="fClass">Customer Hub label</label><select id="fClass" class="a-filter-select">' + C.options(LABELS, st.classification, 'Any label') + '</select>' +
         // G19: buying role, licence status and organization. Plain facts from the CRM (what a person holds on an account or deal, what they have bought, where they are), never a score.
         '<label class="crm-sr" for="fRole">Buying role</label><select id="fRole" class="a-filter-select">' + C.options(ROLES, st.role, 'Any buying role') + '</select>' +
         '<label class="crm-sr" for="fLicense">Licence</label><select id="fLicense" class="a-filter-select">' + C.options(LICENSES, st.license, 'Any licence status') + '</select>' +
-        '<div><label class="crm-sr" for="fOrg">Organization</label><input type="search" id="fOrg" placeholder="Organization name" value="' + esc(st.organization) + '"></div>' +
-        '<label class="crm-sr" for="fSort">Sort by</label><select id="fSort" class="a-filter-select">' + C.options(SORTS, st.sort) + '</select>' +
+        '<div><label class="crm-sr" for="fOrg">Organization</label><input type="search" id="fOrg" placeholder="Organization name" value="' + esc(st.organization) + '"></div>' : '') +
+        '<label class="crm-sr" for="fSort">Sort by</label><select id="fSort" class="a-filter-select">' + C.options(sortOptions(), st.sort) + '</select>' +
         '<label class="crm-sr" for="fDir">Order</label><select id="fDir" class="a-filter-select"><option value="desc"' + (st.dir === 'desc' ? ' selected' : '') + '>Newest first</option><option value="asc"' + (st.dir === 'asc' ? ' selected' : '') + '>Oldest first</option></select>' +
-        '<label class="crm-check" style="margin:0;"><input type="checkbox" id="fTest"' + (st.test ? ' checked' : '') + '> Include test addresses</label></div>' : '') +
+        '<label class="crm-check" style="margin:0;"><input type="checkbox" id="fTest"' + (st.test ? ' checked' : '') + '> Include test addresses</label>' +
+        '<div class="fn-columns-wrap"><button type="button" class="a-btn a-btn-outline a-btn-sm" id="columnsBtn" aria-haspopup="true" aria-expanded="false">Columns ▾</button><div class="fn-columns-menu" id="columnsMenu" hidden></div></div></div>' : '') +
       '<div id="cBody" aria-live="polite"></div><div id="cPager"></div></div>';
     var qEl = document.getElementById('fQ');
     if (qEl) {
       var go = C.debounce(function () { st.page = 1; fetchList(); }, 250);
       qEl.addEventListener('input', function (e) { st.q = e.target.value; go(); });
-      document.getElementById('fRole').addEventListener('change', function (e) { st.role = e.target.value; st.page = 1; fetchList(); });
-      document.getElementById('fLicense').addEventListener('change', function (e) { st.license = e.target.value; st.page = 1; fetchList(); });
-      document.getElementById('fOrg').addEventListener('input', C.debounce(function (e) { st.organization = e.target.value; st.accountId = ''; st.page = 1; fetchList(); }, 250));
-      document.getElementById('fSort').addEventListener('change', function (e) { st.sort = e.target.value; st.page = 1; fetchList(); });
-      document.getElementById('fDir').addEventListener('change', function (e) { st.dir = e.target.value; st.page = 1; fetchList(); });
+      [['fGroup', 'group'], ['fStatus', 'status'], ['fSource', 'source'], ['fClass', 'classification'], ['fRole', 'role'], ['fLicense', 'license'], ['fSort', 'sort'], ['fDir', 'dir']].forEach(function (p) {
+        var el = document.getElementById(p[0]); if (el) el.addEventListener('change', function (e) { st[p[1]] = e.target.value; st.page = 1; fetchList(); });
+      });
+      var org = document.getElementById('fOrg');
+      if (org) org.addEventListener('input', C.debounce(function (e) { st.organization = e.target.value; st.accountId = ''; st.page = 1; fetchList(); }, 250));
       document.getElementById('fTest').addEventListener('change', function (e) { st.test = e.target.checked; st.page = 1; fetchList(); });
+      document.getElementById('columnsBtn').addEventListener('click', toggleColumnsMenu);
+      document.addEventListener('click', function (e) { var m = document.getElementById('columnsMenu'); if (m && !m.hidden && !m.contains(e.target) && e.target.id !== 'columnsBtn') closeColumnsMenu(); });
     }
     var add = document.getElementById('addContact');
     if (add) add.addEventListener('click', addContact);
     var imp = document.getElementById('importPeople');
     if (imp) imp.addEventListener('click', importPeople);
+    var mg = document.getElementById('manageGroups');
+    if (mg) mg.addEventListener('click', manageGroups);
+    var ex = document.getElementById('exportCsv');
+    if (ex) ex.addEventListener('click', exportCsv);
   }
 
-  function fetchList() {
-    var params = { q: st.q, classification: st.classification, assigned: st.assigned, role: st.role, license: st.license, organization: st.organization, accountId: st.accountId, locked: st.locked ? 'true' : '', today: C.todayLocal(), sort: st.sort === 'changed' ? '' : st.sort, dir: st.dir === 'desc' ? '' : st.dir, includeTest: st.test ? 'true' : '', page: st.page > 1 ? st.page : '' };
-    C.writeQuery(params);
+  // ---- The Columns button (L8). The choice is kept in this browser; the older page's saved choice is read once. ----------------------------------------------------------------
+  function closeColumnsMenu() { var m = document.getElementById('columnsMenu'), b = document.getElementById('columnsBtn'); if (m) m.hidden = true; if (b) b.setAttribute('aria-expanded', 'false'); }
+  function toggleColumnsMenu() {
+    var m = document.getElementById('columnsMenu'), b = document.getElementById('columnsBtn');
+    if (!m.hidden) { closeColumnsMenu(); return; }
+    m.innerHTML = COLUMNS.filter(colAvailable).map(function (c) { return '<label><input type="checkbox" data-col="' + esc(c.key) + '"' + (visible.indexOf(c.key) >= 0 ? ' checked' : '') + '> ' + esc(c.label) + '</label>'; }).join('');
+    m.hidden = false; b.setAttribute('aria-expanded', 'true');
+    m.querySelectorAll('[data-col]').forEach(function (box) {
+      box.addEventListener('change', function () {
+        var k = box.getAttribute('data-col');
+        if (box.checked) { if (visible.indexOf(k) < 0) visible.push(k); }
+        else if (visible.filter(function (x) { return colAvailable(COLUMNS.filter(function (c) { return c.key === x; })[0] || {}); }).length > 1) visible = visible.filter(function (x) { return x !== k; });
+        else { box.checked = true; C.toast('At least one column has to stay visible'); return; }
+        try { localStorage.setItem(COLUMNS_KEY, JSON.stringify(visible)); } catch (e) { /* private mode: the choice just is not kept */ }
+        fetchList(true);
+      });
+    });
+  }
+
+  function params() {
+    return { q: st.q, classification: st.classification, assigned: st.assigned, role: st.role, license: st.license, organization: st.organization, accountId: st.accountId, locked: st.locked ? 'true' : '', group: st.group, status: st.status, source: st.source, includeTest: st.test ? 'true' : '' };
+  }
+  var lastData = null;
+
+  function statCard(label, v) { return '<div class="a-stat-card"><div class="label">' + esc(label) + '</div><div class="value">' + esc(C.num(v)) + '</div></div>'; }
+  function cell(c, key) {
+    var a = c.address || {};
+    switch (key) {
+      case 'name': return '<td class="a-cell-title"><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.id) + '">' + esc(c.name || c.email) + '</a>' + (visible.indexOf('email') < 0 ? '<div class="crm-small crm-muted">' + esc(c.email) + '</div>' : '') + '</td>';
+      case 'email': return '<td>' + esc(c.email) + '</td>';
+      case 'label': return '<td>' + C.classPill(c.classification) + (c.classificationLocked ? ' <span class="crm-small crm-muted" title="A CRM Admin set this label by hand, so it will not change on its own.">Set by hand</span>' : '') + '</td>';
+      case 'phone': return '<td>' + esc(c.phone || '—') + '</td>';
+      case 'company': return '<td>' + esc(c.company || '—') + '</td>';
+      case 'address': var line = [a.street, a.city, [a.state, a.zip].filter(Boolean).join(' ')].filter(Boolean).join(', '); return '<td title="' + esc(line) + '">' + esc(line || '—') + '</td>';
+      case 'owner': return '<td>' + (c.assignedAdminId ? esc(C.staffName(staff, c.assignedAdminId) || 'Former staff') : '<span class="crm-muted">Nobody yet</span>') + '</td>';
+      case 'contacted': return '<td>' + (c.lastContactedAt ? esc(C.date(c.lastContactedAt)) : '<span class="crm-muted">Never</span>') + '</td>';
+      case 'signupDate': return '<td>' + esc(C.date(c.signupDate) || '—') + '</td>';
+      case 'source': return '<td>' + (c.source ? '<span class="a-pill a-pill-neutral">' + esc(c.source) + '</span>' : '—') + '</td>';
+      case 'status': return '<td><span class="a-pill ' + (c.status === 'Subscribed' ? 'a-pill-success' : 'a-pill-neutral') + '">' + esc(c.status) + '</span></td>';
+      case 'role': return '<td>' + (c.role ? '<span class="a-pill a-pill-neutral">' + esc(ROLE_LABELS_SHORT[c.role] || c.role) + '</span>' : '—') + '</td>';
+      case 'gradeLevels': return '<td>' + (c.gradeLevels || []).map(function (g) { return '<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">' + esc(GRADE_CODES[g] || g) + '</span>'; }).join('') + ((c.gradeLevels || []).length ? '' : '—') + '</td>';
+      case 'groups': return '<td>' + (c.groups || []).map(function (g) { return '<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">' + esc(g.name) + '</span>'; }).join('') + ((c.groups || []).length ? '' : '—') + '</td>';
+    }
+    return '<td></td>';
+  }
+  function rowButtons(c) {
+    var subscribed = c.status === 'Subscribed', b = '';
+    if (C.can('write') && c.hasAccount && !c.accountVerified) b += '<button type="button" class="a-icon-btn" title="Resend verification email" aria-label="Resend verification email to ' + esc(c.email) + '" data-resend="' + esc(c.id) + '">📧</button>';
+    b += '<a class="a-icon-btn" href="admin-crm-contact.html?id=' + esc(c.id) + '#purchases" title="Purchases &amp; licenses" aria-label="Purchases and licenses for ' + esc(c.name || c.email) + '">🧾</a>';
+    if (C.can('write')) b += '<a class="a-icon-btn" href="admin-crm-contact.html?id=' + esc(c.id) + '&amp;edit=1" title="Edit details" aria-label="Edit details for ' + esc(c.name || c.email) + '">✏️</a>' +
+      '<button type="button" class="a-icon-btn" title="' + (subscribed ? 'Unsubscribe' : 'Resubscribe') + '" aria-label="' + (subscribed ? 'Unsubscribe ' : 'Resubscribe ') + esc(c.email) + '" data-sub="' + esc(c.id) + '" data-to="' + (subscribed ? 'Unsubscribed' : 'Subscribed') + '">' + (subscribed ? '🔕' : '🔔') + '</button>';
+    if (C.can('erase')) b += '<button type="button" class="a-icon-btn danger" title="Delete" aria-label="Delete ' + esc(c.name || c.email) + '" data-del="' + esc(c.id) + '" data-name="' + esc(c.name || c.email) + '">🗑️</button>';
+    return '<td><div class="a-row-actions">' + b + '</div></td>';
+  }
+  function drawRows(r) {
+    var body = document.getElementById('cBody');
+    var cols = COLUMNS.filter(function (c) { return colAvailable(c) && visible.indexOf(c.key) >= 0; });
+    if (!cols.length) cols = COLUMNS.filter(function (c) { return c.key === 'name'; });
+    body.innerHTML = '<div class="fn-table-scroll"><table class="a-table" aria-label="Contacts"><thead><tr>' + cols.map(function (c) {
+      if (!c.sort || (!hub && HUB_ONLY_SORTS.indexOf(c.sort) >= 0)) return '<th scope="col">' + esc(c.label) + '</th>';
+      var on = st.sort === c.sort;
+      return '<th scope="col" aria-sort="' + (on ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none') + '"><button type="button" class="fn-sort" data-sort="' + esc(c.sort) + '">' + esc(c.label) + '<span class="fn-sort-arrow" aria-hidden="true">' + (on ? (st.dir === 'asc' ? ' ▲' : ' ▼') : '') + '</span></button></th>';
+    }).join('') + '<th scope="col"><span class="crm-sr">Actions</span></th></tr></thead><tbody>' +
+      r.contacts.map(function (c) { return '<tr>' + cols.map(function (col) { return cell(c, col.key); }).join('') + rowButtons(c) + '</tr>'; }).join('') + '</tbody></table></div>';
+    body.querySelectorAll('[data-sort]').forEach(function (b) { b.addEventListener('click', function () { setSort(b.getAttribute('data-sort')); }); });
+    body.querySelectorAll('[data-sub]').forEach(function (b) { b.addEventListener('click', function () { setSubscription(Number(b.getAttribute('data-sub')), b.getAttribute('data-to')); }); });
+    body.querySelectorAll('[data-del]').forEach(function (b) { b.addEventListener('click', function () { deleteContact(Number(b.getAttribute('data-del')), b.getAttribute('data-name')); }); });
+    body.querySelectorAll('[data-resend]').forEach(function (b) { b.addEventListener('click', function () { resend(Number(b.getAttribute('data-resend'))); }); });
+  }
+  function setSort(key) {
+    if (st.sort === key) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+    else { st.sort = key; st.dir = ['signup', 'changed', 'contacted'].indexOf(key) >= 0 ? 'desc' : 'asc'; }
+    var s = document.getElementById('fSort'), d = document.getElementById('fDir');
+    if (s) s.value = st.sort; if (d) d.value = st.dir;
+    st.page = 1; fetchList();
+  }
+
+  function fetchList(redrawOnly) {
+    if (redrawOnly && lastData) { drawRows(lastData); return; }
+    var p = params();
+    C.writeQuery(Object.assign({}, p, { today: C.todayLocal(), sort: st.sort === (hub ? 'changed' : 'signup') ? '' : st.sort, dir: st.dir === 'desc' ? '' : st.dir, page: st.page > 1 ? st.page : '' }));
     var body = document.getElementById('cBody');
     C.loading(body);
-    params.sort = st.sort; params.dir = st.dir; params.pageSize = 25; params.page = st.page;
-    C.api('GET', '/api/crm/contacts' + C.qstr(params)).then(function (r) {
+    var req = Object.assign({}, p, { today: C.todayLocal(), sort: st.sort, dir: st.dir, pageSize: 50, page: st.page });
+    C.api('GET', '/api/admin/contacts' + C.qstr(req)).then(function (r) {
       if (!r.ok) { C.errorBox(body, C.problem(r)); return; }
-      if (!r.data.total) { body.innerHTML = C.empty(st.q || st.classification || st.assigned || st.role || st.license || st.organization || st.accountId || st.locked ? 'Nobody matches those filters.' : 'No contacts yet.', '👤'); document.getElementById('cPager').innerHTML = ''; return; }
-      body.innerHTML = '<table class="a-table" aria-label="Contacts"><thead><tr><th scope="col">Name</th><th scope="col">Label</th><th scope="col">Company</th><th scope="col">Owner</th><th scope="col">Last contacted</th><th scope="col">Email list</th></tr></thead><tbody>' +
-        r.data.contacts.map(function (c) {
-          return '<tr><td><a class="crm-link" href="admin-crm-contact.html?id=' + esc(c.id) + '">' + esc(c.name || c.email) + '</a><div class="crm-small crm-muted">' + esc(c.email) + '</div></td><td>' + C.classPill(c.classification) + (c.classificationLocked ? ' <span class="crm-small crm-muted" title="A CRM Admin set this label by hand, so it will not change on its own.">Set by hand</span>' : '') + '</td><td>' + esc(c.company || '') + '</td><td>' + (c.assignedAdminId ? esc(C.staffName(staff, c.assignedAdminId) || 'Former staff') : '<span class="crm-muted">Nobody yet</span>') + '</td><td>' + (c.lastContactedAt ? esc(C.date(c.lastContactedAt)) : '<span class="crm-muted">Never</span>') + '</td><td><span class="crm-small crm-muted">' + esc(c.subscriptionStatus || '') + '</span></td></tr>';
-        }).join('') + '</tbody></table>';
+      lastData = r.data;
+      var stats = document.getElementById('cStats');
+      if (stats && r.data.stats) stats.innerHTML = '<div class="a-stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:16px;">' + statCard('Total contacts', r.data.stats.total) + statCard('Subscribed', r.data.stats.subscribed) + statCard('New this week', r.data.stats.thisWeek) + '</div>';
+      if (!r.data.total) { body.innerHTML = C.empty(Object.keys(p).some(function (k) { return k !== 'includeTest' && p[k]; }) ? 'Nobody matches those filters.' : 'No contacts yet.', '👤'); document.getElementById('cPager').innerHTML = ''; return; }
+      drawRows(r.data);
       C.pager(document.getElementById('cPager'), r.data, function (n) { st.page = n; fetchList(); window.scrollTo(0, 0); });
     });
+  }
+
+  // ---- Row actions: subscribe toggle (R1), resend verification (E9), delete (R2) -------------------------------------------------------------------------------------------
+  function setSubscription(id, to) {
+    C.api('PUT', '/api/admin/contacts/' + id + '/subscription', { status: to }).then(function (r) { if (!r.ok) { C.toast(C.problem(r)); return; } C.toast(to === 'Subscribed' ? 'Resubscribed' : 'Unsubscribed'); fetchList(); });
+  }
+  function resend(id) {
+    C.api('POST', '/api/admin/contacts/' + id + '/resend-verification', {}).then(function (r) { C.toast(r.ok ? 'Verification email sent' : (r.data.error || 'Could not resend verification email')); });
+  }
+  // The server refuses and explains; a person confirms each step (it holds a seat or a role; it has CRM notes), then the same request goes again with that confirmation.
+  function deleteContact(id, name, flags) {
+    flags = flags || {};
+    var first = !flags.confirmClose && !flags.confirmEraseCrmItems;
+    function send() {
+      return C.api('DELETE', '/api/admin/contacts/' + id, flags).then(function (r) {
+        if (r.ok) { C.toast(r.data.accountClosed ? 'Contact removed and sign-in account closed' : 'Contact removed'); fetchList(); return; }
+        if (r.data.code === 'confirm_close' && !flags.confirmClose) { deleteContact(id, name, Object.assign({}, flags, { confirmClose: true, ask: r.data.error + ' Close this account and remove the contact?' })); return; }
+        if (r.data.code === 'contact_has_crm_items' && !flags.confirmEraseCrmItems) { deleteContact(id, name, Object.assign({}, flags, { confirmEraseCrmItems: true, ask: r.data.error + ' Erase this person AND those ' + r.data.items + ' CRM items? This cannot be undone. (CRM Admin only.)' })); return; }
+        return C.problem(r);
+      });
+    }
+    if (first) {
+      C.dialog({ title: 'Remove ' + name + '?', submit: 'Remove', danger: true,
+        body: '<p>Remove this contact? If they have a sign-in account, it gets closed. They\'re signed out and can\'t sign in again until staff reopen it.</p><p class="crm-small crm-muted">Someone who has bought something or is on a deal can\'t be removed here.</p>',
+        onSubmit: function () { return send(); } });
+      return;
+    }
+    var ask = flags.ask; flags = Object.assign({}, flags); delete flags.ask;
+    C.dialog({ title: 'Are you sure?', submit: 'Yes, continue', danger: true, body: '<p>' + esc(ask) + '</p>', onSubmit: function () { return send(); } });
+  }
+
+  // ---- Manage groups (T2) ----------------------------------------------------------------------------------------------------------------------------------
+  function manageGroups() {
+    function draw(d) {
+      var list = d.form.querySelector('#grpList');
+      list.innerHTML = facets.groups.length ? facets.groups.map(function (g) {
+        return '<li><span>' + esc(g.name) + ' <span class="crm-small crm-muted">' + esc(C.num(g.memberCount)) + (g.memberCount === 1 ? ' person' : ' people') + '</span></span><button type="button" class="a-btn a-btn-outline a-btn-sm" data-delgrp="' + esc(g.id) + '" data-name="' + esc(g.name) + '">Delete</button></li>';
+      }).join('') : '<li class="crm-muted">No groups yet.</li>';
+      list.querySelectorAll('[data-delgrp]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (!window.confirm('Delete "' + b.getAttribute('data-name') + '"? People in it won\'t be tagged with it anymore.')) return;
+          C.api('DELETE', '/api/admin/contacts/groups/' + b.getAttribute('data-delgrp'), {}).then(function (r) { if (!r.ok) { d.error(C.problem(r)); return; } refreshFacets().then(function () { draw(d); }); });
+        });
+      });
+    }
+    var d = C.dialog({
+      title: 'Manage groups', submit: null,
+      body: '<p class="crm-small crm-muted">Email groups feed Campaigns, Morning Boost and Licenses. Purchases fill in the built-in groups, so those can\'t be deleted.</p>' +
+        '<div class="crm-toolbar"><div class="grow"><label class="crm-sr" for="grpName">New group name</label><input type="text" id="grpName" maxlength="128" placeholder="New group name"></div><button type="button" class="a-btn a-btn-outline" id="grpAdd">+ Add</button></div>' +
+        '<ul class="crm-list" id="grpList" aria-label="Email groups"></ul>',
+      onOpen: function (form) {
+        form.querySelector('#grpName').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); form.querySelector('#grpAdd').click(); } });
+        form.querySelector('#grpAdd').addEventListener('click', function () {
+          var inp = form.querySelector('#grpName'), name = inp.value.trim();
+          if (!name) { d.error('Type a group name first'); return; }
+          C.api('POST', '/api/admin/contacts/groups', { name: name }).then(function (r) { if (!r.ok) { d.error(C.problem(r)); return; } inp.value = ''; C.toast('Group created'); refreshFacets().then(function () { draw(d); }); });
+        });
+      }
+    });
+    draw(d);
+  }
+  function refreshFacets() {
+    return C.api('GET', '/api/admin/contacts/facets').then(function (r) {
+      if (r.ok) { facets = r.data; var g = document.getElementById('fGroup'); if (g) g.innerHTML = C.options(groupOptions(), st.group, 'All groups'); var s = document.getElementById('fSource'); if (s) s.innerHTML = C.options(sourceOptions(), st.source, 'All sources'); }
+    });
+  }
+
+  // ---- Export (T4): everyone matching the filters on screen, not just this page ----------------------------------------------------------------------------------------
+  function exportCsv() {
+    var p = params(); p.sort = st.sort; p.dir = st.dir; p.today = C.todayLocal();
+    window.location.href = '/api/admin/contacts/export' + C.qstr(p);
+    C.toast('Preparing the export for everyone who matches the current filters');
   }
 
   // ---- G22: the prospect import ----------------------------------------------------------------------------------------------------------------------------

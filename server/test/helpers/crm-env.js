@@ -15,7 +15,7 @@ CREATE TABLE settings (setting_key TEXT PRIMARY KEY, setting_value TEXT);
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, phone TEXT, company TEXT, state TEXT, street TEXT, city TEXT, zip TEXT, signup_date TEXT DEFAULT '2026-01-01 00:00:00',
   source TEXT DEFAULT 'Homepage', status TEXT NOT NULL DEFAULT 'Subscribed',
   crm_classification TEXT NOT NULL DEFAULT 'suspect', classification_updated_at TEXT, classification_locked INTEGER NOT NULL DEFAULT 0,
-  assigned_admin_id INTEGER, last_contacted_at TEXT, crm_source TEXT);
+  assigned_admin_id INTEGER, last_contacted_at TEXT, crm_source TEXT, notes TEXT);
 CREATE TABLE license_products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, is_trial INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER NOT NULL, product_type TEXT DEFAULT 'group_license', license_product_id INTEGER,
   payment_status TEXT NOT NULL DEFAULT 'paid', payment_method TEXT DEFAULT 'manual', amount_cents INTEGER, trial_lesson_limit INTEGER, trial_expiration_date TEXT,
@@ -32,6 +32,8 @@ CREATE TABLE quote_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_number 
 CREATE TABLE quote_content_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, is_default INTEGER DEFAULT 0, section_annual_includes TEXT, section_lesson_package TEXT, section_video_access TEXT, section_license_terms TEXT);
 CREATE TABLE crm_quote_events (id INTEGER PRIMARY KEY AUTOINCREMENT, quote_id INTEGER NOT NULL, opportunity_id INTEGER, event_type TEXT NOT NULL, detail TEXT, actor_admin_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, closed_at TEXT);
+CREATE TABLE site_user_audiences (site_user_id INTEGER NOT NULL, audience TEXT NOT NULL);
+CREATE TABLE contact_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, system_key TEXT UNIQUE);
 CREATE TABLE contact_group_members (contact_id INTEGER NOT NULL, group_id INTEGER NOT NULL, PRIMARY KEY (contact_id, group_id));
 CREATE TABLE invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_number TEXT, contact_id INTEGER NOT NULL, status TEXT DEFAULT 'unpaid', created_at TEXT DEFAULT '2026-01-01 00:00:00', po_received_date TEXT);
 CREATE TABLE schools (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT, district_id INTEGER, display_name TEXT);

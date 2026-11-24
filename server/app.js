@@ -205,6 +205,8 @@ app.use('/api/crm/attention', crmAttentionRoutes);
 app.use('/api/crm/timeline', crmTimelineRoutes);
 app.use('/api/crm/audit', crmAuditRoutes);
 app.use('/api/crm', crmSettingsRoutes);
+// The merged Contacts screen (docs/reference/contact-pages-merge-requirements.md): keeps working with the Hub switched off (requireCrmRole, not requireCrm), so it is NOT a crm-* file.
+app.use('/api/admin/contacts', require('./routes/contact-screens'));
 
 // Always serve uploaded files at /uploads/ from wherever UPLOADS_DIR points.
 // In production LiteSpeed checks public_html/uploads/ first; if the file isn't

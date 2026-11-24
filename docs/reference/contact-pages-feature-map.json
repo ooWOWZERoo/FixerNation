@@ -12,87 +12,120 @@
    "features": [
     "L8"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Columns picker; read the saved localStorage choice once (D8)"
+   "status": "moved",
+   "note": "Done in phase 2: also reads the older page's saved choice once (D8)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function loadColumns"
+   }
   },
   "renderTableHead": {
    "features": [
     "L8"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Columns picker; read the saved localStorage choice once (D8)"
+   "status": "moved",
+   "note": "Done in phase 2: sortable headings",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "fn-sort"
+   }
   },
   "renderColumnsMenu": {
    "features": [
     "L8"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Columns picker; read the saved localStorage choice once (D8)"
+   "status": "moved",
+   "note": "Columns picker; read the saved localStorage choice once (D8)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function toggleColumnsMenu"
+   }
   },
   "toggleColumn": {
    "features": [
     "L8"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Columns picker; read the saved localStorage choice once (D8)"
+   "status": "moved",
+   "note": "Columns picker; read the saved localStorage choice once (D8)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "At least one column has to stay visible"
+   }
   },
   "toggleColumnsMenu": {
    "features": [
     "L8"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Columns picker; read the saved localStorage choice once (D8)"
+   "status": "moved",
+   "note": "Columns picker; read the saved localStorage choice once (D8)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function closeColumnsMenu"
+   }
   },
   "fetchContacts": {
    "features": [
     "L7"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Replaced by server paging (D6)"
+   "status": "moved",
+   "note": "Done in phase 2: one page at a time from the server (D6)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "'/api/admin/contacts' + C.qstr(req)"
+   }
   },
   "fetchGroups": {
    "features": [
     "T2",
     "L2"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function refreshFacets"
+   }
   },
   "fetchAndRenderContacts": {
    "features": [
     "L7"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Replaced by server paging (D6)"
+   "status": "moved",
+   "note": "Replaced by server paging (D6)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function fetchList"
+   }
   },
   "populateFilterOptions": {
    "features": [
     "L2",
     "L4"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function sourceOptions"
+   }
   },
   "setSort": {
    "features": [
     "L6"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function setSort"
+   }
   },
   "changePage": {
    "features": [
     "L7"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "C.pager(document.getElementById('cPager')"
+   }
   },
   "applyFiltersAndRender": {
    "features": [
@@ -104,26 +137,36 @@
     "L6",
     "L7",
     "L9",
-    "L10"
+    "L10",
+    "L11"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Also draws every row: the name link to the person page (L9) and the row buttons (L10)"
+   "status": "moved",
+   "note": "Done in phase 2: the rows, the name link (L9), the row buttons (L10) and the three cards (L11); filtering and sorting now happen on the server",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function drawRows"
+   }
   },
   "toggleStatus": {
    "features": [
     "R1"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function setSubscription"
+   }
   },
   "deleteContact": {
    "features": [
     "R2"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Keep every rule: refuses buyers and staff accounts, confirm_close prompt, CRM Admin erase of CRM items"
+   "status": "moved",
+   "note": "Done in phase 2: every rule kept (lib/contact-actions.js is the one copy, shared with the older page until it goes)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "contact_has_crm_items"
+   }
   },
   "renderGroupCheckboxes": {
    "features": [
@@ -246,8 +289,12 @@
     "E9",
     "L10"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "data-resend"
+   },
+   "note": "Row button done in phase 2 (POST /api/admin/contacts/:id/resend-verification). The same button inside the Edit Contact box is E9 (phase 3, resendVerification)."
   },
   "renderContactAccountField": {
    "features": [
@@ -281,44 +328,62 @@
    "features": [
     "T4"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "14 columns, respects the current filters (e2e crm-export-respects-filters), CRM Admin only (D4)"
+   "status": "moved",
+   "note": "Done in phase 2: server-side so it covers every page; CRM Admin only; audited; formula-safe",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "/api/admin/contacts/export"
+   }
   },
   "openGroupsModal": {
    "features": [
     "T2"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function manageGroups"
+   }
   },
   "closeGroupsModal": {
    "features": [
     "T2"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "function refreshFacets"
+   }
   },
   "renderGroupsList": {
    "features": [
     "T2"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"grpList\""
+   }
   },
   "createGroup": {
    "features": [
     "T2"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"grpAdd\""
+   }
   },
   "deleteGroup": {
    "features": [
     "T2"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "data-delgrp"
+   }
   },
   "openImportModal": {
    "features": [
@@ -472,24 +537,33 @@
    "features": [
     "L5"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "C.classPill(c.classification)"
+   }
   },
   "enableCrmLabel": {
    "features": [
     "L5"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "The label column and filter appear only when the Hub is on today; D7 says the merged screens work with it off"
+   "status": "moved",
+   "note": "Done in phase 2: the label column and filter show when the Hub is on and hide when it is off",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "hubEnabled"
+   }
   },
   "gradeCodes": {
    "features": [
     "L8"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Role and Grade Levels optional columns (D8)"
+   "status": "moved",
+   "note": "Role and Grade Levels optional columns (D8)",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "GRADE_CODES"
+   }
   }
  },
  "wiring": {
@@ -497,36 +571,51 @@
    "features": [
     "L1"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"fQ\""
+   }
   },
   "filterGroup": {
    "features": [
     "L2"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"fGroup\""
+   }
   },
   "filterStatus": {
    "features": [
     "L3"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"fStatus\""
+   }
   },
   "filterSource": {
    "features": [
     "L4"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"fSource\""
+   }
   },
   "filterClass": {
    "features": [
     "L5"
    ],
-   "status": "planned",
-   "phase": 2
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "id=\"fClass\""
+   }
   },
   "importFile": {
    "features": [
@@ -539,9 +628,12 @@
    "features": [
     "L8"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Click anywhere closes the Columns menu"
+   "status": "moved",
+   "note": "Click anywhere closes the Columns menu",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "closeColumnsMenu"
+   }
   }
  },
  "routes": {
@@ -805,9 +897,12 @@
    "features": [
     "L5"
    ],
-   "status": "planned",
-   "phase": 2,
-   "note": "Tells the older page whether the Hub is on"
+   "status": "moved",
+   "note": "Done in phase 2: the list asks whether the Hub is on through the merged screen's own route, which answers with the Hub off",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "/api/admin/contacts/access"
+   }
   },
   "/api/site-auth/site-users/:p": {
    "features": [
