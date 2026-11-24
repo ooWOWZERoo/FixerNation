@@ -12,6 +12,24 @@
 <script>(function(){var t=localStorage.getItem('fnTheme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();</script>
 <link rel="stylesheet" href="admin-common.css?v=23">
 <link rel="stylesheet" href="crm-common.css?v=3">
+<style>
+/* Overview layout (2026-11-24): every card in a row is the same height and width, and the gaps between rows are the same everywhere. Local to this page. */
+#crmRoot .crm-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-bottom:24px;}
+#crmRoot .crm-stats.ov-money{grid-template-columns:repeat(4,minmax(0,1fr));}
+#crmRoot .crm-stats > [role="listitem"]{display:flex; min-width:0;}
+#crmRoot .crm-stats .a-stat-card{flex:1; display:flex; flex-direction:column; min-width:0;}
+#crmRoot .crm-stats .a-stat-card .value{white-space:nowrap;}
+#crmRoot .crm-stats .crm-stat-note{margin-top:auto; padding-top:10px;}
+#crmRoot .ov-footnote{margin:-6px 0 24px;}
+#crmRoot .crm-two{align-items:stretch; gap:18px; margin-bottom:24px;}
+#crmRoot .crm-two > div{display:flex; flex-direction:column; min-width:0;}
+#crmRoot .crm-two .a-card{flex:1; margin-bottom:0; min-width:0; overflow-x:auto;}
+#crmRoot .crm-two .a-table{font-size:12.5px;}
+#crmRoot .crm-two .a-table th, #crmRoot .crm-two .a-table td{padding-left:6px; padding-right:6px;}
+#crmRoot .crm-two .a-table th{white-space:normal; letter-spacing:0;}
+@media (max-width:1280px){ #crmRoot .crm-stats.ov-money{grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media (max-width:760px){ #crmRoot .crm-stats, #crmRoot .crm-stats.ov-money{grid-template-columns:minmax(0,1fr);} }
+</style>
 </head>
 <body class="fn-mission-admin">
 
@@ -69,7 +87,7 @@
   function cardsRow(c) {
     c = c || {};
     var unknown = function (label) { return '<div role="listitem">' + tile(label, '—', 'Not available on this server yet.') + '</div>'; };
-    var h = '<div class="crm-stats" role="list" aria-label="Customers, money and timing">';
+    var h = '<div class="crm-stats ov-money" role="list" aria-label="Customers, money and timing">';
     var o = c.customerOrganizations;
     h += o ? '<div role="listitem">' + tile('Customer organizations', C.num(o.count), 'Schools and districts with a paid, non-trial purchase.' + (o.unresolvedPurchases ? ' ' + esc(o.unresolvedPurchases) + ' paid purchase' + (o.unresolvedPurchases === 1 ? '' : 's') + ' name no school and cannot be placed.' : '')) + '</div>' : unknown('Customer organizations');
     var x = c.expectedClosings;
@@ -100,7 +118,7 @@
       '<div role="listitem">' + tile('Weighted pipeline', esc(C.money(p.weightedCents, '$0')), 'Each deal’s value times its stage’s chance of closing.') + '</div>' +
       '</div>' +
       cardsRow(d.cards) +
-      '<p class="crm-small crm-muted" style="margin:-8px 0 22px;">Test addresses ending in @example.com are left out of the counts.</p>';
+      '<p class="crm-small crm-muted ov-footnote">Test addresses ending in @example.com are left out of the counts.</p>';
 
     // Phase 3: what is on my plate today, and what the rules say needs a look.
     html += '<div class="crm-two"><div id="ovTasks"></div><div id="ovAttn"></div></div><p class="crm-status-legend">' + esc(FnCrmStatus.LEGEND) + '</p>';
