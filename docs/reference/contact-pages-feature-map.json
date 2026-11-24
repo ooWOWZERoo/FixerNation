@@ -356,9 +356,8 @@
    "features": [
     "P2"
    ],
-   "status": "planned",
-   "phase": 4,
-   "note": "The book purchase type: see D10 (FNE sells no books)"
+   "status": "dropped",
+   "note": "D10: the book purchase type is not carried over (FNE sells no books); existing book purchases stay and still show in the list"
   },
   "onPurchaseTypeChange": {
    "features": [
@@ -436,14 +435,16 @@
     "P7"
    ],
    "status": "planned",
-   "phase": 4
+   "phase": 4,
+   "note": "D3: moves into the purchases pop-up on the person page, CRM Admin only"
   },
   "unregisterSeat": {
    "features": [
     "P7"
    ],
    "status": "planned",
-   "phase": 4
+   "phase": 4,
+   "note": "D3: moves into the purchases pop-up on the person page, CRM Admin only"
   },
   "addPurchase": {
    "features": [
@@ -464,7 +465,8 @@
     "P7"
    ],
    "status": "planned",
-   "phase": 4
+   "phase": 4,
+   "note": "D3: moves into the purchases pop-up on the person page, CRM Admin only"
   },
   "crmLabelHtml": {
    "features": [
@@ -796,9 +798,8 @@
    "features": [
     "P2"
    ],
-   "status": "planned",
-   "phase": 4,
-   "note": "D10: the book purchase type"
+   "status": "dropped",
+   "note": "D10: the new purchases pop-up does not call /api/books"
   },
   "/api/crm/me": {
    "features": [

@@ -1,6 +1,6 @@
 # Merging the two contact screens into one: requirements and inventory
 
-Status: **decisions D1 to D9 confirmed by the owner on 2026-11-23 (section 8). Phase 1 (the Edit details pop-up) is built; phases 0 and 2 to 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
+Status: **decisions D1 to D10 confirmed by the owner on 2026-11-23 (section 8). Phase 1 (the Edit details pop-up) is built; phases 0 and 2 to 6 are not started.** Per the project's own rule, the access table (section 5) is now the confirmed matrix and each later phase is built once, against it.
 
 ## 1. The goal, in the owner's words
 
@@ -145,7 +145,7 @@ Today the older routes only require sign-in, so a **Read-only** CRM role can edi
 1. **Edit details pop-up on the person page** (name, company, street, city, state, ZIP, phone: part of E1 and E2). *Built 2026-11-23.* The rest of the Edit Contact box is not in it yet; the person page links to the older page for it until phase 3.
 2. **List parity on `admin-crm-contacts.html`:** L1 to L10 (search, group, status, source and label filters, sorting, paging, the column picker with Role and Grade Levels, row buttons), T2 (groups), T4 (export), R1 (subscription toggle), R2 (delete, with every rule above). Server paging (D6). The contact routes work with the Hub off (D7).
 3. **The rest of the person's card:** E1 email (with the sign-in email move and the duplicate-email handling, E13), E3 ship-to, E4 source, E5 subscription, E6 groups, E7 notes, E8 to E12 (site account block, resend verification, password reset, delete account, roles), and T1 (the Hub's **+ Add a person** gets the same fields as the old **+ Add Contact**).
-4. **Purchases and licenses pop-up on the person page:** P1 to P4, P6, and the three seat actions in P7 (assign an email, register directly, free a seat). The `book` purchase type per D10. P5 and P8 stay on the Licenses page.
+4. **Purchases and licenses pop-up on the person page:** P1 to P4, P6, and the three seat actions in P7 (assign an email, register directly, free a seat). The `book` purchase type is not carried over (D10). P5 and P8 stay on the Licenses page.
 5. **One importer:** T3 (the Hub importer gains groups, address, signup date and notes).
 6. **Retire:** first move `createPurchase`, `attachPurchaseDetails` and `assignContactToGroups` out of `routes/newsletter.js` into `server/lib/` (other routes import them, see section 3). Then redirect `admin-newsletter.html`, repoint the **CRM** menu item and the two dashboard buttons (D9), keep the redirect in `mission-control-static-files.txt`, and rewrite the four end-to-end specs. `routes/newsletter.js` itself stays: public sign-up, the unsubscribe link and the Licenses, Quotes, Campaigns, Morning Boost, Orders and School Admins pages still call it.
 
@@ -158,19 +158,20 @@ Each phase is its own commit and deploy. The old page stays fully working until 
 3. Phase 6 does not start until every row is `moved` and verified in production with `curl` and a signed-in walk-through by the owner.
 4. The public and cross-page routes in section 3 are **never removed by this project**; only their last caller can retire them, and that is a separate decision.
 
-## 8. Decisions (all confirmed 2026-11-23)
+## 8. Decisions (D1 to D10, all confirmed 2026-11-23)
 
 | # | Question | Decision |
 |---|---|---|
 | D1 | Target screen | **The Customer Hub pair**: `admin-crm-contacts.html` (list) and `admin-crm-contact.html` (person). `admin-newsletter.html` becomes a redirect only after every row of section 2.2 is proven live on them. |
 | D2 | Which importer survives | **The Hub importer, extended** with the old one's columns (groups, address, signup date, notes), keeping review and undo. The old importer is retired in phase 6. |
-| D3 | Purchases and seats | A **Purchases and licenses pop-up on the person page** (add, edit, mark paid, delete). License dates, a seat's audiences and the school-domain view stay on `admin-licenses.html`. **Amended 2026-11-23 (found in phase 0, owner to confirm):** the Licenses page does not have assign an email, register directly, or free a seat, so those three move into the pop-up too, or they would be orphaned. |
+| D3 | Purchases and seats | A **Purchases and licenses pop-up on the person page** (add, edit, mark paid, delete). License dates, a seat's audiences and the school-domain view stay on `admin-licenses.html`. **Amended and confirmed 2026-11-23 (found in phase 0):** the Licenses page does not have assign an email, register directly, or free a seat, so those three move into the pop-up too (CRM Admin only, like the other purchase actions), or they would be orphaned. |
 | D4 | Roles | **As in section 5.** CRM Admin: everything. Sales: edit details, subscriptions, groups, imports, resend verification and password reset; **not** delete a contact or sign-in account, export the list, or touch purchases and seats. Read-only: look only. |
 | D5 | Read-only can no longer edit | **Accepted** (the older page lets a Read-only role edit and delete today; the merged screens close that). |
 | D6 | Loading | **Server paging**, search and filters on the server (as the Hub list does). Needs indexes on name, email and company. |
 | D7 | Hub switch off | **The merged contact screens keep working** for viewing and editing; only the Hub-only parts (label, deals, tasks, notes panels) hide. Build note: the contact routes must not answer 404 with the Hub off the way `requireCrm` does; use the `requireCrmRole('<action>')` pattern (works with the Hub off) or an equivalent. |
 | D8 | Columns | **Keep the picker**, add Role and Grade Levels as optional columns, and read the old `localStorage` choice once so a person's saved columns carry over. |
 | D9 | Menu name | **Contacts**, under the Customer Hub group. The top-level "CRM" item and the two dashboard buttons are repointed when the old page is redirected. |
+| D10 | The `book` purchase type | **Dropped from the new Add Purchase** (FNE sells no books and the book code is dead). Existing book purchases still show in the list and can still be edited or deleted; nothing is removed from the database. `GET /api/books` is no longer called by the contact screens. |
 
 ## 9. Risks to watch
 
@@ -191,4 +192,4 @@ Checking every row against the real code found these, all fixed above:
 4. **More references to the older page than section 3 listed:** `mission-control-static-files.txt` (the list of static files to deploy), `server/test/crm-pages.test.js`, a comment in `server/scripts/alter-add-quote-school-domain.js`, and comments in two end-to-end specs.
 5. **Delete is bigger than the table said** (R2 above: staff accounts refused, close-account confirmation, CRM Admin erase of CRM items).
 6. **The Edit Contact fields E1 (email), E3 to E7 and the Add Contact form were not assigned to any phase.** They are now phase 3.
-7. **New decision D10 (owner):** the Add Purchase form has a `book` type that loads `/api/books`, but FNE sells no books and the book code is dead. Recommendation: drop the `book` type from the new pop-up, and leave the existing book purchases as they are (the list still shows them). Needs the owner's yes before phase 4.
+7. **Decision D10 (confirmed by the owner the same day):** the Add Purchase form has a `book` type that loads `/api/books`, but FNE sells no books and the book code is dead. The new pop-up drops the `book` type; existing book purchases stay and still show in the list.
