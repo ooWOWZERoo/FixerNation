@@ -5,12 +5,8 @@ import { signInAsAdmin } from "./helpers/auth";
 // Newsletter subscribe — public subscribe form on index.html
 // Fields: #newsletterName (optional), #newsletterEmail (required)
 // Success message: "You're subscribed! Thanks for joining Fixer Nation."
-// The backend (POST /api/newsletter/contacts) returns 200 with
-// { ok: false, reason: 'duplicate' } on a repeat email (unique constraint on
-// newsletter_contacts.email) — the frontend shows a distinct "already on our
-// list" message in that case, not the same success text. That's a deliberate
-// design choice, not a bug: re-subscribing is a no-op on the backend (no new
-// row), and the UI is explicit about it rather than pretending it worked.
+// The backend (POST /api/newsletter/contacts) answers an anonymous caller identically whether or not the address
+// was already on the list (so the form cannot be used to probe who is subscribed); a repeat is a no-op that adds no row.
 // Also verifies the subscriber appears exactly once on the admin Contacts list.
 // ---------------------------------------------------------------------------
 
@@ -58,13 +54,16 @@ test.describe("Newsletter subscribe", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 2. Re-subscribe same email → duplicate message, no new contact created
+  // 2. Re-subscribe same email -> the visitor sees exactly the same answer as the first time, and no second contact is made.
+  //    (The older spec expected a distinct "already on our list" message. The server deliberately gives an identical answer
+  //    whether or not the address was already there, so the public form cannot be used to find out who is on the list; the
+  //    admin test below proves there is still exactly one row.)
   // -------------------------------------------------------------------------
-  test("re-subscribing same email shows the duplicate message", async ({ page }) => {
+  test("re-subscribing the same email looks the same to the visitor and makes no second contact", async ({ page }) => {
     await fillAndSubmitNewsletterForm(page, EMAIL);
 
     await expect(
-      page.getByText("That email is already on our list.", { exact: false })
+      page.getByText("You're subscribed! Thanks for joining Fixer Nation.", { exact: false })
     ).toBeVisible({ timeout: 10000 });
   });
 

@@ -52,7 +52,7 @@ test.describe("Customer Hub: CRM Admin", () => {
     const side = page.locator(".a-sidebar");
     for (const name of ["Overview", "Accounts", "Contacts", "Opportunities", "Hub Settings"]) await expect(side.getByRole("link", { name })).toBeVisible();
     const counts = (await (await page.request.get("/api/crm/contacts/counts")).json()).counts;
-    for (const [label, key] of [["Suspects", "suspect"], ["Prospects", "prospect"], ["Customers", "customer"]] as const) {
+    for (const [label, key] of [["Suspects", "suspect"], ["Prospects", "prospect"], ["Customer contacts", "customer"]] as const) {
       const tile = page.locator(".a-stat-card", { has: page.getByText(label, { exact: true }) });
       await expect(tile.locator(".value")).toHaveText(Number(counts[key]).toLocaleString());
     }
