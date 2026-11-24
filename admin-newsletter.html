@@ -1447,7 +1447,11 @@ function enableCrmLabel() {
 fetch('/api/crm/me', { credentials: 'include' }).then(r => { if (r.ok) enableCrmLabel(); }).catch(() => {});
 
 renderTableHead();
-fetchAndRenderContacts();
+// A link from the Customer Hub contact page (admin-crm-contact.html) arrives as admin-newsletter.html?edit=<contact id>: once the contacts are loaded, open that person's Edit Contact box.
+fetchAndRenderContacts().then(function () {
+  const want = Number(new URLSearchParams(window.location.search).get('edit'));
+  if (Number.isInteger(want) && want > 0 && contactsCache.some(function (x) { return x.id === want; })) editContact(want);
+});
 </script>
 
 <script src="admin-shell.js?v=13"></script>

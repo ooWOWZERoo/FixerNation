@@ -84,7 +84,9 @@
       '<dt>Owner</dt><dd>' + (C.can('write') ? '<label class="crm-sr" for="ownerSel">Owner</label><select id="ownerSel" class="a-filter-select">' + C.ownerOptions(staff, c.assignedAdminId, 'Nobody yet') + '</select>' : esc(C.staffName(staff, c.assignedAdminId) || 'Nobody yet')) + '</dd>' +
       '<dt>Last contacted</dt><dd>' + (c.lastContactedAt ? esc(C.date(c.lastContactedAt)) : '<span class="crm-muted">Never</span>') + '</dd>' +
       '<dt>Email list</dt><dd>' + esc(c.subscriptionStatus || '') + ' <span class="crm-small crm-muted">(a marketing choice, separate from the label above)</span></dd>' +
-      '</dl></div>';
+      '</dl>' +
+      (C.can('write') ? '<p class="crm-small" style="margin:14px 0 0;"><a class="crm-link" href="admin-newsletter.html?edit=' + encodeURIComponent(c.id) + '">Edit name, company, state, phone and address →</a> <span class="crm-muted">(opens this person\u2019s contact card on the CRM page)</span></p>' : '') +
+      '</div>';
 
     // Why a purchase does or does not count
     h += '<div class="a-card"><div class="a-card-head"><h2>Purchases and the Customer rule</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">A purchase makes someone a Customer only when all three checks pass. An accepted quote, an invoice or a PO number does not count on its own.</p>';
