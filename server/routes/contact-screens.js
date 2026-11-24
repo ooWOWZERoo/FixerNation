@@ -5,7 +5,8 @@
 // with the Hub off, so these routes use requireCrmRole, the same role matrix without the off switch (lib/crm-permissions.js). The role still counts with the Hub off: a Read-only
 // admin can look and nothing more, which is the access table in the requirements doc (section 5). A test checks every route here is written (path, requireAuth, requireCrmRole('<action>')).
 //
-// Access: view = list, filters, who-am-I; write = groups, subscribe toggle, resend verification (CRM Admin and Sales); export = CSV (CRM Admin); erase = delete a contact (CRM Admin).
+// Access: view = list, filters, who-am-I, a person's card and roles; write = edit a person, add a person, groups, subscribe toggle, resend verification, send a password reset (CRM Admin and Sales);
+// export = CSV (CRM Admin); erase = delete a contact, delete a sign-in account (CRM Admin).
 // The older newsletter routes stay as they are for their other callers until each one moves.
 const express = require('express');
 const pool = require('../db/pool');
@@ -15,6 +16,12 @@ const { crmAudit } = require('../lib/crm-audit');
 const { text, posInt } = require('../lib/crm-common');
 const L = require('../lib/contact-list');
 const { deleteContact, resendVerification } = require('../lib/contact-actions');
+const { updateContact, createContact, EMAIL_PATTERN } = require('../lib/contact-edit');
+const { attachGroups, attachSiteUserInfo, serialize } = require('../lib/contact-records');
+const { rolesForContact } = require('../lib/contact-roles');
+const accountActions = require('../lib/contact-account');
+const { matchingContacts } = require('../lib/crm-quotes');
+const cls = require('../lib/crm-classification');
 
 const router = express.Router();
 
@@ -96,6 +103,126 @@ router.put('/:id/subscription', requireAuth, requireCrmRole('write'), async (req
 
 router.post('/:id/resend-verification', requireAuth, requireCrmRole('write'), async (req, res) => {
   const r = await resendVerification(posInt(req.params.id));
+  res.status(r.status).json(r.body);
+});
+
+// ---- One person's card (phase 3: everything the older Edit Contact box showed and saved) ---------------------------------------------------------------------------------
+const STATUS_LIST = L.STATUSES;
+const LIMITS = { name: 255, phone: 32, company: 255, source: 100, notes: 15000 };
+const ADDRESS_LIMITS = { street: 255, city: 128, state: 64, zip: 16 };
+
+// What the browser sent, checked and cut to size. Returns { body } or { error }. Only keys that were sent are kept (the edit changes only those). typeof is checked first because
+// RegExp.test() and String() coerce undefined and objects (CLAUDE.md).
+async function cleanCardBody(b) {
+  b = b && typeof b === 'object' ? b : {};
+  const out = {};
+  for (const k of Object.keys(LIMITS)) {
+    if (b[k] === undefined) continue;
+    if (typeof b[k] !== 'string') return { error: `${k} must be text.` };
+    out[k] = b[k].trim().slice(0, LIMITS[k]);
+  }
+  if (b.email !== undefined) {
+    if (typeof b.email !== 'string' || !EMAIL_PATTERN.test(b.email.trim()) || b.email.trim().length > 254) return { error: 'A valid email address is required.' };
+    out.email = b.email.trim();
+  }
+  if (b.status !== undefined) {
+    if (typeof b.status !== 'string' || !STATUS_LIST.includes(b.status)) return { error: 'Email list status must be Subscribed or Unsubscribed.' };
+    out.status = b.status;
+  }
+  for (const [key, limits] of [['address', ADDRESS_LIMITS], ['shipTo', { name: 255, company: 255, ...ADDRESS_LIMITS }]]) {
+    if (b[key] === undefined) continue;
+    if (!b[key] || typeof b[key] !== 'object' || Array.isArray(b[key])) return { error: `${key} must be an object.` };
+    out[key] = {};
+    for (const [f, max] of Object.entries(limits)) {
+      if (b[key][f] === undefined) continue;
+      if (typeof b[key][f] !== 'string') return { error: `${key}.${f} must be text.` };
+      out[key][f] = b[key][f].trim().slice(0, max);
+    }
+  }
+  if (b.groupIds !== undefined) {
+    if (!Array.isArray(b.groupIds) || b.groupIds.length > 500) return { error: 'groupIds must be a list.' };
+    const ids = [...new Set(b.groupIds.map(posInt).filter(Boolean))];
+    if (ids.length) {
+      const [have] = await pool.query(`SELECT id FROM contact_groups WHERE id IN (${ids.map(() => '?').join(',')})`, ids);
+      out.groupIds = have.map(g => g.id);
+    } else out.groupIds = [];
+  }
+  return { body: out };
+}
+
+// The card: the contact with address, ship-to, source, status, notes, email groups, the sign-in account (if any), and the CRM fields that are plain columns (owner, last contacted, label).
+router.get('/:id/card', requireAuth, requireCrmRole('view'), async (req, res) => {
+  const id = posInt(req.params.id);
+  const [rows] = id ? await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [id]) : [[]];
+  if (!rows.length) return res.status(404).json({ error: 'Contact not found' });
+  const [contact] = await attachSiteUserInfo(await attachGroups(rows));
+  res.json({ contact: { ...serialize(contact), assignedAdminId: rows[0].assigned_admin_id || null, lastContactedAt: rows[0].last_contacted_at || null }, hubEnabled: await isCrmEnabled() });
+});
+
+// Roles and assignments: teacher seats, School and District Administrator roles, grade levels. Read-only.
+router.get('/:id/roles', requireAuth, requireCrmRole('view'), async (req, res) => {
+  const id = posInt(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Contact not found' });
+  const r = await rolesForContact(id);
+  res.status(r.status).json(r.body);
+});
+
+// Add a person with every field the older Add Contact form had. With the Hub on they also start as a Suspect, owned by whoever added them, from "crm_manual" (as the Hub's own Add did).
+// A repeat email (any capitalisation, or a +tag of the same mailbox) is refused with the existing person's id. The email-list status defaults to Unsubscribed: no consent is recorded for a person typed in.
+router.post('/', requireAuth, requireCrmRole('write'), async (req, res) => {
+  const c = await cleanCardBody(req.body);
+  if (c.error) return res.status(400).json({ error: c.error });
+  if (!c.body.email) return res.status(400).json({ error: 'A valid email address is required.' });
+  const dups = await matchingContacts(pool, c.body.email);
+  if (dups.length) return res.status(409).json({ code: 'duplicate_email', existingContactId: dups[0], error: 'A contact with this email already exists. Open it instead.' });
+  const r = await createContact(c.body);
+  if (r.status !== 201) return res.status(r.status).json(r.body);
+  const hub = await isCrmEnabled();
+  let classification = null;
+  if (hub) {
+    await pool.query('UPDATE newsletter_contacts SET crm_source = ?, assigned_admin_id = ? WHERE id = ?', ['crm_manual', req.crm.adminId, r.body.id]);
+    await cls.reconcileContact(pool, r.body.id, { actorAdminId: req.crm.adminId });
+    const [[row]] = await pool.query('SELECT crm_classification FROM newsletter_contacts WHERE id = ?', [r.body.id]);
+    classification = (row && row.crm_classification) || 'suspect';
+  }
+  await crmAudit(req, { action: 'crm_contact_created', entityType: 'crm_contact', entityId: r.body.id, next: { source: 'contacts_screen', subscribed: c.body.status === 'Subscribed' } });
+  res.status(201).json({ ok: true, id: r.body.id, classification });
+});
+
+// Edit the whole card. Only what is sent changes. Changing the email also moves the person's sign-in account's email (refused if another account has it). The audit row names the fields, never their values.
+router.put('/:id', requireAuth, requireCrmRole('write'), async (req, res) => {
+  const id = posInt(req.params.id);
+  if (!id) return res.status(404).json({ error: 'Contact not found' });
+  const c = await cleanCardBody(req.body);
+  if (c.error) return res.status(400).json({ error: c.error });
+  if (!Object.keys(c.body).length) return res.status(400).json({ error: 'Nothing to change.' });
+  const r = await updateContact(id, c.body);
+  if (r.status === 200 && r.body.changed.length) await crmAudit(req, { action: 'crm_contact_details_changed', entityType: 'crm_contact', entityId: id, next: { fields: r.body.changed, accountEmailUpdated: !!r.body.accountEmailUpdated } });
+  res.status(r.status).json(r.body);
+});
+
+// The sign-in account behind this person (matched by email): send a password reset (CRM Admin and Sales), or delete the account (CRM Admin only; a seat it held reopens).
+async function accountOf(id) {
+  const [[c]] = id ? await pool.query('SELECT email FROM newsletter_contacts WHERE id = ?', [id]) : [[null]];
+  if (!c) return { error: { status: 404, body: { error: 'Contact not found' } } };
+  const [[u]] = await pool.query('SELECT id, role, is_fne_staff FROM site_users WHERE email = ?', [c.email]);
+  if (!u) return { error: { status: 404, body: { error: 'No account is registered for this email' } } };
+  return { user: u };
+}
+router.post('/:id/send-password-reset', requireAuth, requireCrmRole('write'), async (req, res) => {
+  const a = await accountOf(posInt(req.params.id));
+  if (a.error) return res.status(a.error.status).json(a.error.body);
+  const r = await accountActions.sendPasswordReset(a.user.id, req.user);
+  res.status(r.status).json(r.body);
+});
+router.delete('/:id/site-account', requireAuth, requireCrmRole('erase'), async (req, res) => {
+  const id = posInt(req.params.id);
+  const a = await accountOf(id);
+  if (a.error) return res.status(a.error.status).json(a.error.body);
+  // The older route had no such check; a Fixer Nation staff account is never removed from a contact card (the contact delete refuses it the same way).
+  if (a.user.role === 'admin' || Number(a.user.is_fne_staff)) return res.status(409).json({ code: 'staff_account', error: 'This is a Fixer Nation staff account and cannot be deleted here.' });
+  const r = await accountActions.deleteSiteAccount(a.user.id);
+  if (r.status === 200) await crmAudit(req, { action: 'crm_contact_site_account_deleted', entityType: 'crm_contact', entityId: id });
   res.status(r.status).json(r.body);
 });
 

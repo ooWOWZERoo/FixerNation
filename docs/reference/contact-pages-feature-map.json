@@ -172,73 +172,100 @@
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Done in phase 3: the groups box in contact-form.js (find a group, tick the ones that apply)",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "data-group"
+   }
   },
   "renderGroupPills": {
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Done in phase 3: the groups box in contact-form.js (find a group, tick the ones that apply)",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "data-group"
+   }
   },
   "addGroup": {
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Done in phase 3: the groups box in contact-form.js (find a group, tick the ones that apply)",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "data-group"
+   }
   },
   "removeGroup": {
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Done in phase 3: the groups box in contact-form.js (find a group, tick the ones that apply)",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "data-group"
+   }
   },
   "onGroupsSearchInput": {
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Done in phase 3: the groups box in contact-form.js (find a group, tick the ones that apply)",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "data-group"
+   }
   },
   "scheduleHideGroupsDropdown": {
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Done in phase 3: the groups box in contact-form.js (find a group, tick the ones that apply)",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "data-group"
+   }
   },
   "hideGroupsDropdown": {
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Done in phase 3: the groups box in contact-form.js (find a group, tick the ones that apply)",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "data-group"
+   }
   },
   "getCheckedGroupIds": {
    "features": [
     "E6"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Groups picker inside the Edit Contact box"
+   "status": "moved",
+   "note": "Groups picker inside the Edit Contact box",
+   "proof": {
+    "file": "contact-form.js",
+    "includes": "[data-group]:checked"
+   }
   },
   "openContactModal": {
    "features": [
     "T1"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Add Contact form"
+   "status": "moved",
+   "note": "Done in phase 3: + Add a person has every field the older Add Contact form had",
+   "proof": {
+    "file": "admin-crm-contacts.html",
+    "includes": "'/api/admin/contacts', body"
+   }
   },
   "editContact": {
    "features": [
@@ -250,16 +277,22 @@
     "E6",
     "E7"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Phase 1 already moved name, company, street, city, state, ZIP, phone (Edit details pop-up)"
+   "status": "moved",
+   "note": "Done in phases 1 and 3: the whole card is in the Edit details pop-up",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "'/api/admin/contacts/' + id, body"
+   }
   },
   "closeContactModal": {
    "features": [
     "E1"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function editDetails"
+   }
   },
   "saveContact": {
    "features": [
@@ -273,16 +306,22 @@
     "E13",
     "T1"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "Email change moves the sign-in email; duplicate-email message"
+   "status": "moved",
+   "note": "Done in phase 3: PUT /api/admin/contacts/:id (email change moves the sign-in email; duplicate-email messages kept in lib/contact-edit.js) and POST for a new person",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "accountEmailUpdated"
+   }
   },
   "renderRolesAndAssignments": {
    "features": [
     "E12"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function drawRoles"
+   }
   },
   "resendVerificationButtonHtml": {
    "features": [
@@ -300,29 +339,41 @@
    "features": [
     "E8"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "id=\"account\""
+   }
   },
   "resendVerification": {
    "features": [
     "E9"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function resendV"
+   }
   },
   "sendAccountPasswordReset": {
    "features": [
     "E10"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function resetPw"
+   }
   },
   "deleteSiteAccount": {
    "features": [
     "E11"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "function delAcct"
+   }
   },
   "exportCsv": {
    "features": [
@@ -908,16 +959,23 @@
    "features": [
     "E11"
    ],
-   "status": "planned",
-   "phase": 3,
-   "note": "DELETE the sign-in account"
+   "status": "moved",
+   "note": "Done in phase 3: DELETE /api/admin/contacts/:id/site-account (CRM Admin only); the older route stays for the older page",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "/site-account'"
+   }
   },
   "/api/site-auth/site-users/:p/send-password-reset": {
    "features": [
     "E10"
    ],
-   "status": "planned",
-   "phase": 3
+   "status": "moved",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "/send-password-reset"
+   },
+   "note": "Done in phase 3: POST /api/admin/contacts/:id/send-password-reset"
   }
  },
  "references": {
@@ -941,9 +999,12 @@
   },
   "admin-crm-contact.html": {
    "what": "The note and link on the person card for fields not in the pop-up yet",
-   "status": "planned",
-   "phase": 3,
-   "note": "Remove when the last field has moved"
+   "status": "moved",
+   "note": "Done in phase 3: the note and the link are gone; the whole card is edited in the Edit details pop-up.",
+   "proof": {
+    "file": "admin-crm-contact.html",
+    "includes": "'/api/admin/contacts/' + id + '/card'"
+   }
   },
   "server/test/crm-pages.test.js": {
    "what": "Pins the older page (the label column)",

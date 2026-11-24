@@ -69,12 +69,11 @@ test('ACCESS: Read-only cannot edit; the owner change still works, alone or toge
   assert.ok(audits('crm_contact_owner_changed').length >= 2);
 });
 
-test('THE PAGE: an Edit details button opens a pop-up with the seven fields and saves through the Customer Hub route; the old CRM page is only linked for what is not here yet', () => {
+test('THE PAGE: an Edit details button opens a pop-up with the whole card and saves through the merged Contacts route (phase 3); the older CRM page is no longer linked from here', () => {
   const page = fs.readFileSync(path.join(env.SERVER, '..', 'admin-crm-contact.html'), 'utf8');
   assert.match(page, /C\.can\('write'\) \? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="editDetails">Edit details…<\/button>'/);
-  for (const id of ['edName', 'edCompany', 'edPhone', 'edStreet', 'edCity', 'edState', 'edZip']) assert.match(page, new RegExp(`'${id}'`), id);
-  assert.match(page, /C\.api\('PUT', '\/api\/crm\/contacts\/' \+ id, \{ name: v\('#edName'\)/);
-  assert.match(page, /href="admin-newsletter\.html\?edit=' \+ encodeURIComponent\(c\.id\) \+ '">CRM page<\/a>/);
+  assert.match(page, /C\.api\('PUT', '\/api\/admin\/contacts\/' \+ id, body\)/);
+  assert.doesNotMatch(page, /admin-newsletter/, 'every field is here now, so nothing points at the older page');
   assert.doesNotThrow(() => new (require('node:vm').Script)([...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].pop()[1]));
 });
 

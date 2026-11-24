@@ -93,7 +93,7 @@ test('OLD CONTACTS PAGE: gets the label column and filter only while the Custome
   assert.match(html, /filterClass && \(c\.crmClassification \|\| 'suspect'\) !== filterClass/);
   assert.match(html, /status: `<td><span class="a-pill \$\{subscribed \? 'a-pill-success' : 'a-pill-neutral'\}">/, 'the Status column is unchanged');
   assert.doesNotMatch(html, /\b(hot|warm|cold)\b\s*(lead|label)/i);
-  const route = read('server/routes/newsletter.js');
+  const route = read('server/lib/contact-records.js'); // moved out of routes/newsletter.js in merge phase 3 (shared with the merged Contacts screen)
   assert.match(route, /crmClassification: row\.crm_classification \|\| null/);
 });
 

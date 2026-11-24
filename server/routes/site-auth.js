@@ -15,6 +15,7 @@ const { reencodeImageToWebp } = require('../lib/upload-safety');
 const { createToken, consumeToken } = require('../lib/site-tokens');
 const { audit } = require('../lib/audit');
 const { attachPurchaseDetails } = require('./newsletter');
+const accountActions = require('../lib/contact-account'); // staff actions on a sign-in account, shared with routes/contact-screens.js
 const { requireAuth } = require('../middleware/auth');
 const { hasActiveLicense, hasActiveSchoolAdminAssignment, hasActiveDistrictAdminAssignment, hasActiveAffiliateAccount, getParentClassrooms } = require('../lib/access');
 const { addTeacherToSocialGroups } = require('../lib/social-groups');
@@ -695,38 +696,13 @@ router.put('/me/audiences', requireSiteAuth, async (req, res) => {
 // Sends the customer the same password-reset email they'd get from
 // self-service "Forgot Password", just initiated by the admin instead.
 router.post('/site-users/:id/send-password-reset', requireAuth, async (req, res) => {
-  const [rows] = await pool.query('SELECT id, first_name, email FROM site_users WHERE id = ?', [req.params.id]);
-  const user = rows[0];
-  if (!user) return res.status(404).json({ error: 'Site user not found' });
-
-  const resetToken = await createToken(user.id, 'reset', 60 * 60 * 1000);
-  const resetUrl = `${process.env.SITE_URL || ''}/reset-password.html?token=${resetToken}`;
-  await sendPasswordResetEmail({ to: user.email, firstName: user.first_name, resetUrl });
-  await audit(pool, { actorType: 'admin', actorId: req.user && req.user.userId, action: 'admin_reset_email_sent', entityType: 'site_user', entityId: user.id });
-  res.json({ ok: true });
+  const r = await accountActions.sendPasswordReset(req.params.id, req.user);
+  res.status(r.status).json(r.body);
 });
 
 router.delete('/site-users/:id', requireAuth, async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    // Free up any license seats this account had claimed so they can be
-    // handed to someone else, rather than leaving an orphaned "registered"
-    // seat with no linked account.
-    await connection.query(
-      "UPDATE license_seats SET status = 'pending', registered_site_user_id = NULL, registered_at = NULL WHERE registered_site_user_id = ?",
-      [req.params.id]
-    );
-    const [result] = await connection.query('DELETE FROM site_users WHERE id = ?', [req.params.id]);
-    await connection.commit();
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Site user not found' });
-    res.json({ ok: true });
-  } catch (err) {
-    await connection.rollback();
-    throw err;
-  } finally {
-    connection.release();
-  }
+  const r = await accountActions.deleteSiteAccount(req.params.id);
+  res.status(r.status).json(r.body);
 });
 
 // The sign-in lockout for one email, for the admin Demo page (a stranger's wrong guesses can lock a shared demo login): how many seconds it is

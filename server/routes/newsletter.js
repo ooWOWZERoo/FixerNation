@@ -13,80 +13,15 @@ const { claimForAccountByEmail } = require('../lib/own-seat-claim');
 const { loadCrmRole, can } = require('../lib/crm-permissions');
 const { audit } = require('../lib/audit');
 const { recordAttributionForEmail } = require('../lib/attribution'); // Sales CRM phase 6: first and latest touch from the fn_attr cookie, advisory only
+const { updateContact: updateContactLib } = require('../lib/contact-edit');
+const { rolesForContact: rolesForContactLib } = require('../lib/contact-roles');
 const { deleteContact: deleteContactAction, resendVerification: resendVerificationAction } = require('../lib/contact-actions'); // shared with routes/contact-screens.js
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Suspect / Prospect / Customer after a purchase changes (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function attachGroups(contacts) {
-  if (contacts.length === 0) return contacts;
-  const [rows] = await pool.query(
-    `SELECT m.contact_id, g.id, g.name FROM contact_group_members m
-     JOIN contact_groups g ON g.id = m.group_id
-     WHERE m.contact_id IN (?)`,
-    [contacts.map(c => c.id)]
-  );
-  const groupsByContact = {};
-  rows.forEach(r => {
-    (groupsByContact[r.contact_id] = groupsByContact[r.contact_id] || []).push({ id: r.id, name: r.name });
-  });
-  return contacts.map(c => ({ ...c, groups: groupsByContact[c.id] || [] }));
-}
-
-// Site users (public-site accounts) aren't a separate CRM entity — they're
-// linked to a contact purely by matching email, so this surfaces account
-// status as a value on the contact rather than a standalone admin dashboard.
-async function attachSiteUserInfo(contacts) {
-  if (contacts.length === 0) return contacts;
-  const emails = contacts.map(c => c.email);
-  const [rows] = await pool.query('SELECT id, email, email_verified, role FROM site_users WHERE email IN (?)', [emails]);
-  const byEmail = {};
-  rows.forEach(r => { byEmail[r.email.toLowerCase()] = r; });
-  // The grade levels each of these accounts teaches (site_user_audiences), for the CRM's Grade levels column.
-  const levelsByUser = {};
-  if (rows.length) {
-    const [aud] = await pool.query('SELECT site_user_id, audience FROM site_user_audiences WHERE site_user_id IN (?)', [rows.map(r => r.id)]);
-    aud.forEach(a => { (levelsByUser[a.site_user_id] = levelsByUser[a.site_user_id] || []).push(a.audience); });
-  }
-  return contacts.map(c => {
-    const su = byEmail[c.email.toLowerCase()];
-    return { ...c, siteUser: su ? { ...su, audiences: levelsByUser[su.id] || [] } : null };
-  });
-}
-
-async function setContactGroups(connection, contactId, groupIds) {
-  await connection.query('DELETE FROM contact_group_members WHERE contact_id = ?', [contactId]);
-  if (Array.isArray(groupIds) && groupIds.length) {
-    await connection.query(
-      'INSERT INTO contact_group_members (contact_id, group_id) VALUES ' + groupIds.map(() => '(?, ?)').join(', '),
-      groupIds.flatMap(gid => [contactId, gid])
-    );
-  }
-}
-
-function serialize(row) {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone || '',
-    company: row.company || '',
-    address: { street: row.street || '', city: row.city || '', state: row.state || '', zip: row.zip || '' },
-    shipTo: { name: row.ship_to_name || '', company: row.ship_to_company || '', street: row.ship_to_street || '', city: row.ship_to_city || '', state: row.ship_to_state || '', zip: row.ship_to_zip || '' },
-    signupDate: row.signup_date,
-    source: row.source,
-    status: row.status,
-    notes: row.notes || '',
-    groups: row.groups || [],
-    siteUserId: row.siteUser ? row.siteUser.id : null,
-    hasAccount: !!row.siteUser,
-    accountVerified: row.siteUser ? !!row.siteUser.email_verified : false,
-    role: row.siteUser ? row.siteUser.role : null,
-    gradeLevels: row.siteUser ? row.siteUser.audiences || [] : [], // full names; the CRM page shows ES/MS/HS/HE
-    crmClassification: row.crm_classification || null, // Sales CRM label (Suspect / Prospect / Customer); null until scripts/alter-create-crm-core.js has run. Read-only here.
-  };
-}
+const { attachGroups, attachSiteUserInfo, setContactGroups, serialize } = require('../lib/contact-records'); // shared with routes/contact-screens.js
 
 // Anonymous callers only (an admin adding contacts in bulk must never be throttled).
 const newsletterSignupLimit = limiter({ name: 'newsletter-signup', windowMs: 60 * 60 * 1000, max: 20, key: (req) => (getAuthUser(req) ? null : clientIp(req)) });
@@ -171,85 +106,11 @@ router.get('/contacts/search', requireAuth, async (req, res) => {
 
 // Full contact edit — name/email/address/source/status/group membership.
 // Only fields present in the body are changed.
+// Full contact edit (name, email, phone, company, address, ship-to, source, status, notes, groups). The rules, including moving the sign-in account's email with the contact's, are in
+// lib/contact-edit.js, shared with the merged Contacts screen (routes/contact-screens.js).
 router.put('/contacts/:id', requireAuth, async (req, res) => {
-  const [existingRows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-  const existing = existingRows[0];
-  if (!existing) return res.status(404).json({ error: 'Contact not found' });
-
-  const b = req.body || {};
-  const address = b.address || {};
-  let shipTo = null;
-  if (b.shipTo !== undefined) {
-    try { shipTo = cleanParty(b.shipTo, 'ship'); }
-    catch (err) { if (err.status) return res.status(err.status).json({ error: err.message }); throw err; }
-  }
-  const merged = {
-    name: b.name !== undefined ? b.name : existing.name,
-    email: b.email !== undefined ? b.email.trim() : existing.email,
-    phone: b.phone !== undefined ? b.phone : existing.phone,
-    company: b.company !== undefined ? b.company : existing.company,
-    street: b.address !== undefined ? address.street || '' : existing.street,
-    city: b.address !== undefined ? address.city || '' : existing.city,
-    state: b.address !== undefined ? address.state || '' : existing.state,
-    zip: b.address !== undefined ? address.zip || '' : existing.zip,
-    source: b.source !== undefined ? b.source : existing.source,
-    status: b.status !== undefined ? b.status : existing.status,
-    notes: b.notes !== undefined ? b.notes : existing.notes,
-  };
-
-  // Changing the contact's email moves the sign-in account's email with it (rule E), so the two records cannot drift apart. Refused when
-  // another account already uses the new address.
-  let accountToMove = null;
-  if (String(merged.email).toLowerCase() !== String(existing.email).toLowerCase()) {
-    const [[acct]] = await pool.query('SELECT id, closed_at FROM site_users WHERE LOWER(email) = LOWER(?)', [existing.email]);
-    if (acct && !acct.closed_at) {
-      const [[taken]] = await pool.query('SELECT id FROM site_users WHERE LOWER(email) = LOWER(?) AND id <> ?', [merged.email, acct.id]);
-      if (taken) {
-        return res.status(409).json({ code: 'account_email_in_use', error: `${merged.email} is already the sign-in email of another account, so this contact's email cannot move there. Use a different address.` });
-      }
-      accountToMove = acct;
-    }
-  }
-
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    await connection.query(
-      'UPDATE newsletter_contacts SET name=?, email=?, phone=?, company=?, street=?, city=?, state=?, zip=?, source=?, status=?, notes=? WHERE id=?',
-      [merged.name, merged.email, merged.phone, merged.company, merged.street, merged.city, merged.state, merged.zip, merged.source, merged.status, merged.notes, req.params.id]
-    );
-    if (shipTo) {
-      await connection.query(
-        'UPDATE newsletter_contacts SET ship_to_name=?, ship_to_company=?, ship_to_street=?, ship_to_city=?, ship_to_state=?, ship_to_zip=? WHERE id=?',
-        [shipTo.name || null, shipTo.company || null, shipTo.street || null, shipTo.city || null, shipTo.state || null, shipTo.zip || null, req.params.id]
-      );
-    }
-    if (accountToMove) {
-      await connection.query('UPDATE site_users SET email = ? WHERE id = ?', [merged.email, accountToMove.id]);
-      await connection.query('UPDATE license_seats SET invited_email = ? WHERE LOWER(invited_email) = LOWER(?)', [merged.email, existing.email]);
-      await connection.query("UPDATE school_invitations SET invited_email = ? WHERE LOWER(invited_email) = LOWER(?) AND status NOT IN ('registered', 'revoked', 'expired')", [merged.email, existing.email]);
-    }
-    if (b.groupIds !== undefined) {
-      await setContactGroups(connection, req.params.id, b.groupIds);
-    }
-    await connection.commit();
-  } catch (err) {
-    await connection.rollback();
-    // The email column is unique. Say which contact already has the address instead of failing without a reason.
-    if (err.code === 'ER_DUP_ENTRY') {
-      const [[other]] = await pool.query('SELECT id, name FROM newsletter_contacts WHERE email = ? AND id <> ? LIMIT 1', [merged.email, req.params.id]);
-      const who = other ? `${other.name || 'another contact'} (contact #${other.id})` : 'another contact';
-      return res.status(409).json({ code: 'email_in_use', existingContactId: other ? other.id : null,
-        error: `${merged.email} already belongs to ${who}. Edit or delete that contact instead, or use a different address.` });
-    }
-    throw err;
-  } finally {
-    connection.release();
-  }
-
-  const [rows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-  const [contact] = await attachSiteUserInfo(await attachGroups(rows));
-  res.json({ contact: serialize(contact), accountEmailUpdated: !!accountToMove });
+  const r = await updateContactLib(req.params.id, req.body);
+  res.status(r.status).json(r.body);
 });
 
 // The rules for deleting a contact (a buyer is refused, a person on a deal is refused, CRM items need a CRM Admin to confirm, a sign-in account is closed) live in
@@ -277,64 +138,8 @@ router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) =
 // matching email, never a direct FK — so this is a contact-id entry point
 // that resolves to a site_user first, then fans out from there.
 router.get('/contacts/:id/roles', requireAuth, async (req, res) => {
-  const [[contact]] = await pool.query('SELECT email FROM newsletter_contacts WHERE id = ?', [req.params.id]);
-  if (!contact) return res.status(404).json({ error: 'Contact not found' });
-
-  const [[siteUser]] = await pool.query('SELECT id, role FROM site_users WHERE email = ?', [contact.email]);
-  if (!siteUser) {
-    return res.json({ role: null, audiences: [], schoolAdminRoles: [], districtAdminRoles: [], teacherSeats: [] });
-  }
-
-  const [schoolAdminRows] = await pool.query(
-    `SELECT sla.id, sla.permission_level, sla.is_active, sla.notes, sla.created_at,
-            p.id AS purchase_id, p.school_domain, lp.name AS license_name
-     FROM school_license_admins sla
-     JOIN purchases p ON p.id = sla.purchase_id
-     LEFT JOIN license_products lp ON lp.id = p.license_product_id
-     WHERE sla.site_user_id = ? ORDER BY sla.created_at DESC`,
-    [siteUser.id]
-  );
-
-  const [districtAdminRows] = await pool.query(
-    `SELECT dla.id, dla.is_active, dla.notes, dla.created_at, d.id AS district_id, d.name AS district_name
-     FROM district_license_admins dla
-     JOIN districts d ON d.id = dla.district_id
-     WHERE dla.site_user_id = ? ORDER BY dla.created_at DESC`,
-    [siteUser.id]
-  );
-
-  // Matches by registered_site_user_id (already claimed) OR invited_email
-  // (still pending) -- a teacher can hold a seat they haven't registered
-  // for yet, which has no site_user_id to match on at all.
-  const [teacherSeatRows] = await pool.query(
-    `SELECT ls.id, ls.status, p.id AS purchase_id, p.school_domain, lp.name AS license_name,
-            si.grade_level, si.role_title, si.department, si.subject_area
-     FROM license_seats ls
-     JOIN purchases p ON p.id = ls.purchase_id
-     LEFT JOIN license_products lp ON lp.id = p.license_product_id
-     LEFT JOIN school_invitations si ON si.seat_id = ls.id
-     WHERE ls.registered_site_user_id = ? OR ls.invited_email = ?
-     ORDER BY ls.id DESC`,
-    [siteUser.id, contact.email]
-  );
-
-  // Curriculum level (ES/MS/HS/Higher Ed) is a per-person preference, not
-  // per-seat -- a teacher sets it once on their own account (or their
-  // school admin/an FNE admin sets it for them), not once per license they
-  // happen to hold. Fetched once here rather than duplicated onto every
-  // teacherSeats row.
-  const [audienceRows] = await pool.query(
-    'SELECT audience FROM site_user_audiences WHERE site_user_id = ?',
-    [siteUser.id]
-  );
-
-  res.json({
-    role: siteUser.role,
-    audiences: audienceRows.map(r => r.audience),
-    schoolAdminRoles: schoolAdminRows,
-    districtAdminRoles: districtAdminRows,
-    teacherSeats: teacherSeatRows,
-  });
+  const r = await rolesForContactLib(req.params.id);
+  res.status(r.status).json(r.body);
 });
 
 // Auto-assigns a contact to the correct system group(s) based on what they

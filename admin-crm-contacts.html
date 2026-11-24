@@ -46,6 +46,7 @@
 
 <script src="admin-common.js?v=18"></script>
 <script src="crm-common.js?v=3"></script>
+<script src="contact-form.js?v=1"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -126,7 +127,7 @@
       (st.view === 'list' && C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="manageGroups">Manage groups</button>' : '') +
       (st.view === 'list' && C.can('export') ? '<button type="button" class="a-btn a-btn-outline" id="exportCsv">Export CSV</button>' : '') +
       (hub && C.can('write') ? '<button type="button" class="a-btn a-btn-outline" id="importPeople">Import people</button>' : '') +
-      (hub && C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addContact">+ Add a person</button>' : '') + '</div>' +
+      (C.can('write') ? '<button type="button" class="a-btn a-btn-primary" id="addContact">+ Add a person</button>' : '') + '</div>' +
       (hub ? '<ul class="crm-views" aria-label="Saved views">' + VIEWS.map(function (v) { return '<li><a href="' + esc(viewHref(v)) + '"' + (st.view === 'list' && viewActive(v) ? ' aria-current="true"' : '') + '>' + esc(v[0]) + '</a></li>'; }).join('') + '<li>' + dupTab + '</li><li>' + reviewTab + '</li><li>' + importsTab + '</li></ul>' : '') +
       (st.view === 'list' ?
         '<div class="crm-toolbar" role="search"><div class="grow"><label class="crm-sr" for="fQ">Search contacts</label><input type="search" id="fQ" placeholder="Search name, email, phone or company" title="Use * for any run of letters and ? for a single letter. A pattern has to match the whole field." value="' + esc(st.q) + '"></div>' +
@@ -501,15 +502,17 @@
     });
   }
 
+  // Add a person with every field the older Add Contact form had (name, email, phone, company, address, ship-to, source, email-list status, groups, notes). With the Hub on they also start
+  // as a Suspect owned by whoever adds them. A repeat email is refused and the existing person is named.
   function addContact() {
     C.dialog({
-      title: 'Add a person', submit: 'Add as a Suspect',
-      body: '<p class="crm-small crm-muted">They start as a Suspect. They are not put on the newsletter unless you tick the box.</p>' +
-        '<div class="a-form-row">' + C.field('Name', '<input type="text" id="nName" maxlength="255">', '', 'nName') + C.field('Email', '<input type="email" id="nEmail" maxlength="254" required>', '', 'nEmail') + '</div>' +
-        '<div class="a-form-row">' + C.field('Company', '<input type="text" id="nCompany" maxlength="255">', '', 'nCompany') + C.field('State', '<input type="text" id="nState" maxlength="64">', '', 'nState') + '</div>' +
-        '<div class="crm-check"><input type="checkbox" id="nSub"><label for="nSub">They agreed to get the newsletter</label></div>',
+      title: 'Add a person', submit: hub ? 'Add as a Suspect' : 'Add person',
+      body: FnContactForm.body({ contact: null, groups: facets.groups, sources: facets.sources }),
+      onOpen: function (f) { FnContactForm.wire(f); },
       onSubmit: function (f) {
-        return C.api('POST', '/api/crm/contacts', { name: f.querySelector('#nName').value, email: f.querySelector('#nEmail').value, company: f.querySelector('#nCompany').value, state: f.querySelector('#nState').value, subscribe: f.querySelector('#nSub').checked }).then(function (r) {
+        var body = FnContactForm.read(f);
+        if (!body.email) return 'Email is required.';
+        return C.api('POST', '/api/admin/contacts', body).then(function (r) {
           if (r.ok) { window.location.href = 'admin-crm-contact.html?id=' + r.data.id; return; }
           if (r.data.code === 'duplicate_email' && r.data.existingContactId) return r.data.error + ' (It is person number ' + r.data.existingContactId + '.)';
           return C.problem(r);

@@ -35,6 +35,7 @@
 <script src="admin-common.js?v=18"></script>
 <script src="crm-common.js?v=3"></script>
 <script src="crm-panels.js?v=6"></script>
+<script src="contact-form.js?v=1"></script>
 <script>
 (function () {
   var C = FnCrm, esc = C.esc, root = document.getElementById('crmRoot');
@@ -50,49 +51,83 @@
     backfill: 'Set when the Customer Hub was first filled in.'
   };
 
-  C.boot(root).then(function (me) {
+  var hub = true;      // whether the Customer Hub's own parts (label, owner, deals, quotes, notes, tasks) are switched on; the card, the sign-in account and editing work either way (decision D7)
+  var card = null;     // the contact card from /api/admin/contacts/:id/card (works with the Hub off)
+  var groups = [], sources = [];
+
+  // Sign-in check, then who I am from the merged screen's own route, which answers with the Hub off (the Hub's own routes answer 404 then).
+  function boot() {
+    if (typeof fnRequireAuth === 'function') fnRequireAuth();
+    return C.api('GET', '/api/admin/contacts/access').then(function (r) {
+      if (r.ok) { C.perms = r.data.permissions || {}; C.role = r.data.role; C.adminId = r.data.adminId; hub = !!r.data.hubEnabled; return r.data; }
+      var msg = r.status === 403 ? 'Your login does not have a Customer Hub role yet. A CRM Admin can give you one.' : r.status === 503 ? 'The Customer Hub is not set up on this server yet.' : 'The contact could not be reached. Try again in a moment.';
+      root.innerHTML = '<div class="a-card"><div class="a-empty"><div class="big" aria-hidden="true">🔒</div><p>' + esc(msg) + '</p></div></div>';
+      return null;
+    });
+  }
+  boot().then(function (me) {
     if (!me) return;
     if (!id) { root.innerHTML = '<div class="a-card">' + C.empty('No person was chosen. Go back to the list and pick one.', '👤') + '</div>'; return; }
-    C.staff().then(function (list) { staff = list; load(); });
+    (hub ? C.staff() : Promise.resolve([])).then(function (list) { staff = list; load(); });
   });
 
   var editOpened = false, scrolled = false;
   function load() {
     C.loading(root);
-    C.api('GET', '/api/crm/contacts/' + id).then(function (r) {
+    Promise.all([C.api('GET', '/api/admin/contacts/' + id + '/card'), hub ? C.api('GET', '/api/crm/contacts/' + id) : Promise.resolve(null)]).then(function (res) {
+      var r = res[0], h = res[1];
       if (!r.ok) { root.innerHTML = '<div class="a-card">' + C.empty(r.status === 404 ? 'That person does not exist.' : C.problem(r), '👤') + '</div>'; return; }
-      data = r.data; draw();
+      if (h && !h.ok) { root.innerHTML = '<div class="a-card">' + C.empty(C.problem(h), '👤') + '</div>'; return; }
+      card = r.data.contact; data = h ? h.data : null; draw();
     });
   }
 
   function check(ok, yes, no) { return '<td class="' + (ok ? 'yes' : 'no') + '">' + (ok ? '✓ ' + esc(yes) : '✗ ' + esc(no)) + '</td>'; }
 
+  function pill(on, yes, no) { return '<span class="a-pill ' + (on ? 'a-pill-success' : 'a-pill-neutral') + '">' + esc(on ? yes : no) + '</span>'; }
+  function none() { return '<span class="crm-muted">Not set</span>'; }
   function draw() {
-    var c = data.contact, cls = c.classification;
-    var addr = [c.street, [c.city, c.state].filter(Boolean).join(', '), c.zip].filter(Boolean).join(' · ');
+    var c = card, d = data && data.contact, cls = d ? d.classification : null;
+    var a = c.address || {}, sh = c.shipTo || {};
+    var addr = [a.street, [a.city, a.state].filter(Boolean).join(', '), a.zip].filter(Boolean).join(' · ');
+    var shipLine = [sh.name, sh.company, sh.street, [sh.city, sh.state].filter(Boolean).join(', '), sh.zip].filter(Boolean).join(' · ');
     document.getElementById('pageTitle').textContent = c.name || c.email;
     document.title = 'Fixer Nation Education - ' + (c.name || c.email);
     var h = '<p><a class="crm-link" href="admin-crm-contacts.html">← All contacts</a></p>';
-    h += '<div class="a-card"><div class="a-card-head"><h2>' + C.classPill(cls) + (c.classificationLocked ? ' <span class="crm-small crm-muted">set by hand</span>' : '') + '</h2><div class="crm-row-actions">' +
-      (C.can('promote_prospect') && cls === 'suspect' ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="promote">Move to Prospect</button>' : '') +
-      (C.can('set_customer') && cls !== 'customer' ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="override">Mark as Customer…</button>' : '') +
-      (C.can('set_customer') && c.classificationLocked ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="release">Release the hand-set label</button>' : '') +
+    h += '<div class="a-card"><div class="a-card-head"><h2>' + (d ? C.classPill(cls) + (d.classificationLocked ? ' <span class="crm-small crm-muted">set by hand</span>' : '') : esc(c.name || c.email)) + '</h2><div class="crm-row-actions">' +
+      (d && C.can('promote_prospect') && cls === 'suspect' ? '<button type="button" class="a-btn a-btn-primary a-btn-sm" id="promote">Move to Prospect</button>' : '') +
+      (d && C.can('set_customer') && cls !== 'customer' ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="override">Mark as Customer…</button>' : '') +
+      (d && C.can('set_customer') && d.classificationLocked ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="release">Release the hand-set label</button>' : '') +
       (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="editDetails">Edit details…</button>' : '') +
-      (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="recheck">Check again</button>' : '') +
-      (C.can('merge') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="mergeC">Merge into another…</button>' : '') +
-      '</div></div><p class="crm-small crm-muted" style="margin:0 0 14px;">' + esc(C.classHelp(cls)) + '</p><dl class="crm-kv">' +
+      (C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="toggleSub">' + (c.status === 'Subscribed' ? 'Unsubscribe' : 'Resubscribe') + '</button>' : '') +
+      (d && C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="recheck">Check again</button>' : '') +
+      (d && C.can('merge') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="mergeC">Merge into another…</button>' : '') +
+      (C.can('erase') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="deleteC" style="color:var(--a-danger); border-color:var(--a-danger);">Delete…</button>' : '') +
+      '</div></div>' + (d ? '<p class="crm-small crm-muted" style="margin:0 0 14px;">' + esc(C.classHelp(cls)) + '</p>' : '') + '<dl class="crm-kv">' +
       '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' +
-      '<dt>Company</dt><dd>' + (c.company ? esc(c.company) : '<span class="crm-muted">Not set</span>') + '</dd>' +
-      '<dt>Phone</dt><dd>' + (c.phone ? esc(c.phone) : '<span class="crm-muted">Not set</span>') + '</dd>' +
-      '<dt>Address</dt><dd>' + (addr ? esc(addr) : '<span class="crm-muted">Not set</span>') + '</dd>' +
-      '<dt>State</dt><dd>' + (c.state ? esc(c.state) : '<span class="crm-muted">Not set</span>') + '</dd>' +
-      '<dt>Owner</dt><dd>' + (C.can('write') ? '<label class="crm-sr" for="ownerSel">Owner</label><select id="ownerSel" class="a-filter-select">' + C.ownerOptions(staff, c.assignedAdminId, 'Nobody yet') + '</select>' : esc(C.staffName(staff, c.assignedAdminId) || 'Nobody yet')) + '</dd>' +
-      '<dt>Last contacted</dt><dd>' + (c.lastContactedAt ? esc(C.date(c.lastContactedAt)) : '<span class="crm-muted">Never</span>') + '</dd>' +
-      '<dt>Email list</dt><dd>' + esc(c.subscriptionStatus || '') + ' <span class="crm-small crm-muted">(a marketing choice, separate from the label above)</span></dd>' +
-      '</dl>' +
-      (C.can('write') ? '<p class="crm-small crm-muted" style="margin:14px 0 0;">The email address, ship-to address, email groups, notes and sign-in account are still edited on the <a class="crm-link" href="admin-newsletter.html?edit=' + encodeURIComponent(c.id) + '">CRM page</a>.</p>' : '') +
-      '</div>';
+      '<dt>Company</dt><dd>' + (c.company ? esc(c.company) : none()) + '</dd>' +
+      '<dt>Phone</dt><dd>' + (c.phone ? esc(c.phone) : none()) + '</dd>' +
+      '<dt>Address</dt><dd>' + (addr ? esc(addr) : none()) + '</dd>' +
+      '<dt>State</dt><dd>' + (a.state ? esc(a.state) : none()) + '</dd>' +
+      '<dt>Ship to</dt><dd>' + (shipLine ? esc(shipLine) + ' <span class="crm-small crm-muted">(used on invoices)</span>' : '<span class="crm-muted">Same as the address above</span>') + '</dd>' +
+      '<dt>Source</dt><dd>' + (c.source ? esc(c.source) : none()) + '</dd>' +
+      '<dt>Signed up</dt><dd>' + esc(C.date(c.signupDate) || '') + '</dd>' +
+      (d ? '<dt>Owner</dt><dd>' + (C.can('write') ? '<label class="crm-sr" for="ownerSel">Owner</label><select id="ownerSel" class="a-filter-select">' + C.ownerOptions(staff, d.assignedAdminId, 'Nobody yet') + '</select>' : esc(C.staffName(staff, d.assignedAdminId) || 'Nobody yet')) + '</dd>' +
+        '<dt>Last contacted</dt><dd>' + (d.lastContactedAt ? esc(C.date(d.lastContactedAt)) : '<span class="crm-muted">Never</span>') + '</dd>' : '') +
+      '<dt>Email list</dt><dd>' + pill(c.status === 'Subscribed', 'Subscribed', c.status || 'Unsubscribed') + (d ? ' <span class="crm-small crm-muted">(a marketing choice, separate from the label above)</span>' : '') + '</dd>' +
+      '<dt>Email groups</dt><dd>' + ((c.groups || []).length ? c.groups.map(function (g) { return '<span class="a-pill a-pill-neutral" style="margin:0 4px 4px 0;">' + esc(g.name) + '</span>'; }).join('') : '<span class="crm-muted">None</span>') + '</dd>' +
+      '<dt>Notes</dt><dd>' + (c.notes ? '<span style="white-space:pre-wrap;">' + esc(c.notes) + '</span>' : none()) + '</dd>' +
+      '</dl></div>';
 
+    // The sign-in account behind this person (matched by email), and the roles and seats it holds.
+    h += '<div class="a-card" id="account"><div class="a-card-head"><h2>Sign-in account</h2><div class="crm-row-actions">' +
+      (c.hasAccount && C.can('write') && !c.accountVerified ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="resendV">Resend verification</button>' : '') +
+      (c.hasAccount && C.can('write') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="resetPw">Send password reset</button>' : '') +
+      (c.hasAccount && C.can('erase') ? '<button type="button" class="a-btn a-btn-outline a-btn-sm" id="delAcct" style="color:var(--a-danger); border-color:var(--a-danger);">Delete account…</button>' : '') +
+      '</div></div>' + (c.hasAccount ? '<p style="margin:0 0 10px;">' + pill(c.accountVerified, 'Verified', 'Unverified') + ' Registered on the public site.</p><div id="rolesBox"><span class="crm-muted">Loading roles…</span></div>'
+        : '<p style="margin:0;">' + pill(false, '', 'No account') + ' They have not signed up on the public site.</p>') + '</div>';
+
+    if (d) {
     // Why a purchase does or does not count
     h += '<div class="a-card" id="purchases"><div class="a-card-head"><h2>Purchases and the Customer rule</h2></div><p class="crm-small crm-muted" style="margin:0 0 12px;">A purchase makes someone a Customer only when all three checks pass. An accepted quote, an invoice or a PO number does not count on its own.</p>';
     h += data.purchases.length ? '<table class="a-table crm-check-table" aria-label="Purchases and whether each one counts"><thead><tr><th scope="col">Purchase</th><th scope="col">Paid?</th><th scope="col">Amount over $0?</th><th scope="col">Not a trial?</th><th scope="col">Counts?</th></tr></thead><tbody>' +
@@ -118,18 +153,23 @@
         return '<li><strong>' + (e.from && e.from !== e.to ? esc(C.CLASS_LABEL[e.from] || e.from) + ' → ' : '') + esc(C.CLASS_LABEL[e.to] || e.to) + '</strong><div>' + esc(EVENT[e.type] || e.type) + (e.reason ? ' <span class="crm-muted">“' + esc(e.reason) + '”</span>' : '') + '</div><div class="when">' + esc(C.dateTime(e.at)) + (e.actor ? ' · ' + esc(e.actor) : '') + '</div></li>';
       }).join('') + '</ul>' : C.empty('No changes recorded. They have been a Suspect since they arrived.', '🕒')) + '</div></div>';
     h += '<div class="crm-two"><div id="pTasks"></div><div id="pMeetings"></div></div><div class="crm-two"><div id="pNotes"></div><div id="pFiles"></div></div><div id="pAttribution"></div><div id="pTimeline"></div>';
+    }
     root.innerHTML = h;
 
-    var subject = { kind: 'contact', id: id, canWrite: C.can('write'), contacts: [{ id: c.id, name: c.name, email: c.email }] };
-    FnCrmPanels.tasks(document.getElementById('pTasks'), subject);
-    FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
-    FnCrmPanels.notes(document.getElementById('pNotes'), subject);
-    FnCrmPanels.files(document.getElementById('pFiles'), subject);
-    FnCrmPanels.attribution(document.getElementById('pAttribution'), data.attribution);
-    FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
+    if (d) {
+      var subject = { kind: 'contact', id: id, canWrite: C.can('write'), contacts: [{ id: c.id, name: c.name, email: c.email }] };
+      FnCrmPanels.tasks(document.getElementById('pTasks'), subject);
+      FnCrmPanels.meetings(document.getElementById('pMeetings'), subject);
+      FnCrmPanels.notes(document.getElementById('pNotes'), subject);
+      FnCrmPanels.files(document.getElementById('pFiles'), subject);
+      FnCrmPanels.attribution(document.getElementById('pAttribution'), data.attribution);
+      FnCrmPanels.timeline(document.getElementById('pTimeline'), subject);
+    }
+    if (c.hasAccount) drawRoles();
 
     function on(sel, fn) { var el = root.querySelector(sel); if (el) el.addEventListener('click', fn); }
-    on('#editDetails', editDetails);
+    on('#editDetails', editDetails); on('#toggleSub', toggleSub); on('#deleteC', deleteC);
+    on('#resendV', resendV); on('#resetPw', resetPw); on('#delAcct', delAcct);
     // The Contacts list's pencil opens this page with ?edit=1: the Edit details pop-up comes up over the person's page (once), and the person page stays behind it.
     if (!editOpened && new URLSearchParams(window.location.search).get('edit') === '1' && C.can('write')) { editOpened = true; editDetails(); }
     // The list's receipt button links to #purchases; the page draws after it loads, so scroll once it is there.
@@ -149,24 +189,94 @@
       onSubmit: function (f) { return C.api('POST', '/api/crm/contacts/' + id + '/promote', { reason: f.querySelector('#pWhy').value }).then(function (r) { if (r.ok) { C.toast('Moved to Prospect'); load(); return; } return C.problem(r); }); }
     });
   }
-  // Edit details: a pop-up over this page, so the person stays in the Customer Hub. The email address is not here (changing it also moves the sign-in account's email,
-  // which is still done on the CRM page); ship-to, groups, notes and the sign-in account are still there too.
+  // The groups and sources the form offers, fetched once.
+  function formChoices() {
+    if (groups.length || sources.length) return Promise.resolve();
+    return Promise.all([C.api('GET', '/api/admin/contacts/groups'), C.api('GET', '/api/admin/contacts/facets')]).then(function (r) {
+      if (r[0].ok) groups = r[0].data.groups || [];
+      if (r[1].ok) sources = r[1].data.sources || [];
+    });
+  }
+  // Edit details: a pop-up over this page, so the person stays in the Customer Hub. Everything the older Edit Contact box had: name, email (their sign-in account's email moves with it),
+  // phone, company, address, ship-to, source, email-list status, email groups and notes.
   function editDetails() {
-    var c = data.contact;
-    function box(id, label, key, extra) { return C.field(label, '<input type="text" id="' + id + '" maxlength="' + extra.max + '" value="' + esc(c[key] || '') + '"' + (extra.ph ? ' placeholder="' + esc(extra.ph) + '"' : '') + '>', '', id); }
-    C.dialog({
-      title: 'Edit details',
-      submit: 'Save',
-      body: '<p class="crm-small crm-muted" style="margin:0 0 12px;">' + esc(c.email) + ' (the email address is changed on the CRM page).</p>' +
-        '<div class="a-form-row">' + box('edName', 'Name', 'name', { max: 255 }) + box('edCompany', 'Company', 'company', { max: 255 }) + '</div>' +
-        box('edStreet', 'Street address', 'street', { max: 255 }) +
-        '<div class="a-form-row">' + box('edCity', 'City', 'city', { max: 128 }) + box('edState', 'State', 'state', { max: 64, ph: 'e.g. PA' }) + '</div>' +
-        '<div class="a-form-row">' + box('edZip', 'ZIP', 'zip', { max: 16 }) + box('edPhone', 'Phone', 'phone', { max: 32 }) + '</div>',
-      onSubmit: function (f) {
-        function v(sel) { return f.querySelector(sel).value; }
-        return C.api('PUT', '/api/crm/contacts/' + id, { name: v('#edName'), company: v('#edCompany'), phone: v('#edPhone'), street: v('#edStreet'), city: v('#edCity'), state: v('#edState'), zip: v('#edZip') })
-          .then(function (r) { if (r.ok) { C.toast(r.data.changed && r.data.changed.length ? 'Details saved' : 'Nothing changed'); load(); return; } return C.problem(r); });
-      }
+    formChoices().then(function () {
+      var dlg = C.dialog({
+        title: 'Edit details', submit: 'Save',
+        body: FnContactForm.body({ contact: card, groups: groups, sources: sources }),
+        onOpen: function (f) { FnContactForm.wire(f); },
+        onSubmit: function (f) {
+          var body = FnContactForm.read(f);
+          if (!body.email) return 'Email is required.';
+          return C.api('PUT', '/api/admin/contacts/' + id, body).then(function (r) {
+            if (r.ok) { C.toast(r.data.accountEmailUpdated ? 'Details saved. Their sign-in email changed too.' : r.data.changed && r.data.changed.length ? 'Details saved' : 'Nothing changed'); load(); return; }
+            return C.problem(r);
+          });
+        }
+      });
+    });
+  }
+  function toggleSub() {
+    var to = card.status === 'Subscribed' ? 'Unsubscribed' : 'Subscribed';
+    C.api('PUT', '/api/admin/contacts/' + id + '/subscription', { status: to }).then(function (r) { if (!r.ok) { C.toast(C.problem(r)); return; } C.toast(to === 'Subscribed' ? 'Resubscribed' : 'Unsubscribed'); load(); });
+  }
+  // Delete this person. The server refuses and explains (a buyer, someone on a deal, a staff account); a person confirms each step (it holds a seat or a role; it has CRM notes), then the same request goes again.
+  function deleteC(flags) {
+    flags = flags && flags.confirm ? flags : {};
+    var name = card.name || card.email;
+    function send() {
+      var body = {}; if (flags.confirmClose) body.confirmClose = true; if (flags.confirmEraseCrmItems) body.confirmEraseCrmItems = true;
+      return C.api('DELETE', '/api/admin/contacts/' + id, body).then(function (r) {
+        if (r.ok) { C.toast(r.data.accountClosed ? 'Contact removed and sign-in account closed' : 'Contact removed'); window.location.href = 'admin-crm-contacts.html'; return; }
+        if (r.data.code === 'confirm_close' && !flags.confirmClose) { deleteC({ confirm: true, confirmClose: true, confirmEraseCrmItems: flags.confirmEraseCrmItems, ask: r.data.error + ' Close this account and remove the contact?' }); return; }
+        if (r.data.code === 'contact_has_crm_items' && !flags.confirmEraseCrmItems) { deleteC({ confirm: true, confirmEraseCrmItems: true, confirmClose: flags.confirmClose, ask: r.data.error + ' Erase this person AND those ' + r.data.items + ' CRM items? This cannot be undone. (CRM Admin only.)' }); return; }
+        return C.problem(r);
+      });
+    }
+    if (!flags.confirm) {
+      C.dialog({ title: 'Remove ' + name + '?', submit: 'Remove', danger: true,
+        body: '<p>Remove this contact? If they have a sign-in account, it gets closed. They\'re signed out and can\'t sign in again until staff reopen it.</p><p class="crm-small crm-muted">Someone who has bought something or is on a deal can\'t be removed here.</p>',
+        onSubmit: function () { return send(); } });
+      return;
+    }
+    C.dialog({ title: 'Are you sure?', submit: 'Yes, continue', danger: true, body: '<p>' + esc(flags.ask) + '</p>', onSubmit: function () { return send(); } });
+  }
+
+  // ---- The sign-in account (E8 to E11) and its roles (E12) ---------------------------------------------------------------------------------------------------------------
+  function resendV() {
+    C.api('POST', '/api/admin/contacts/' + id + '/resend-verification', {}).then(function (r) { C.toast(r.ok ? 'Verification email sent' : (r.data.error || 'Could not resend verification email')); });
+  }
+  function resetPw() {
+    C.dialog({ title: 'Send a password reset?', submit: 'Send reset email', body: '<p>Send a password reset email to <strong>' + esc(card.email) + '</strong>? It is the same email they get from Forgot Password.</p>',
+      onSubmit: function () { return C.api('POST', '/api/admin/contacts/' + id + '/send-password-reset', {}).then(function (r) { if (r.ok) { C.toast('Password reset email sent'); return; } return C.problem(r); }); } });
+  }
+  function delAcct() {
+    C.dialog({ title: 'Delete this sign-in account?', submit: 'Delete account', danger: true,
+      body: '<p>Delete the account for <strong>' + esc(card.email) + '</strong>? Any license seat they\'ve claimed will reopen for someone else to use. The contact stays.</p><p class="crm-small crm-muted">This cannot be undone.</p>',
+      onSubmit: function () { return C.api('DELETE', '/api/admin/contacts/' + id + '/site-account', {}).then(function (r) { if (r.ok) { C.toast('Account deleted'); load(); return; } return C.problem(r); }); } });
+  }
+  var ROLE_LABELS = { teacher: 'Teacher', school_license_admin: 'School License Administrator', district_admin: 'District Administrator', admin: 'FNE Admin', parent: 'Parent', affiliate: 'Affiliate' };
+  // Everything the generic card cannot show: the account's role, grade levels, every School and District Administrator assignment, and every teacher seat held or invited to.
+  function drawRoles() {
+    var box = document.getElementById('rolesBox');
+    C.api('GET', '/api/admin/contacts/' + id + '/roles').then(function (r) {
+      if (!box || !document.body.contains(box)) return;
+      if (!r.ok) { box.innerHTML = '<span class="crm-inline-error">Could not load roles.</span>'; return; }
+      var d = r.data, labels = [];
+      // site_users.role keeps only the role assigned most recently, so the real set comes from which sections have data.
+      if ((d.schoolAdminRoles || []).length) labels.push('School License Administrator');
+      if ((d.districtAdminRoles || []).length) labels.push('District Administrator');
+      if ((d.teacherSeats || []).length) labels.push('Teacher');
+      if (d.role && ['teacher', 'school_license_admin', 'district_admin'].indexOf(d.role) < 0) labels.push(ROLE_LABELS[d.role] || d.role);
+      var h = labels.map(function (l) { return '<span class="a-pill a-pill-info" style="margin:0 6px 8px 0;">' + esc(l) + '</span>'; }).join('') + (d.audiences || []).map(function (a) { return '<span class="a-pill a-pill-neutral" style="margin:0 6px 8px 0;">' + esc(a) + '</span>'; }).join('');
+      function sec(title, rows) { return rows ? '<div style="margin-top:10px;"><div class="crm-small crm-muted" style="margin-bottom:4px;">' + esc(title) + '</div><ul class="crm-list">' + rows + '</ul></div>' : ''; }
+      var school = (d.schoolAdminRoles || []).map(function (sa) { return '<li><div>🏫 ' + esc(sa.license_name || 'School License') + (sa.school_domain ? ' — ' + esc(sa.school_domain) : '') + ' <span class="a-pill ' + (sa.is_active ? 'a-pill-success' : 'a-pill-neutral') + '">' + esc(sa.permission_level) + (sa.is_active ? '' : ' · inactive') + '</span>' + (sa.notes ? '<div class="crm-small crm-muted">' + esc(sa.notes) + '</div>' : '') + '</div><a class="crm-link" href="admin-school-admins.html">Manage</a></li>'; }).join('');
+      var district = (d.districtAdminRoles || []).map(function (da) { return '<li><div>🗺️ ' + esc(da.district_name) + ' <span class="a-pill ' + (da.is_active ? 'a-pill-success' : 'a-pill-neutral') + '">' + (da.is_active ? 'active' : 'inactive') + '</span>' + (da.notes ? '<div class="crm-small crm-muted">' + esc(da.notes) + '</div>' : '') + '</div><a class="crm-link" href="admin-districts.html">Manage</a></li>'; }).join('');
+      var seats = (d.teacherSeats || []).map(function (ts) {
+        var detail = [ts.role_title, ts.department, ts.subject_area, ts.grade_level ? 'Grade: ' + ts.grade_level : null].filter(Boolean).map(esc).join(' · ');
+        return '<li><div>🍎 ' + esc(ts.license_name || 'License') + (ts.school_domain ? ' — ' + esc(ts.school_domain) : '') + ' ' + (ts.status === 'registered' ? '<span class="a-pill a-pill-success">Registered</span>' : '<span class="a-pill a-pill-warning">Pending</span>') + (detail ? '<div class="crm-small crm-muted">' + detail + '</div>' : '') + '</div></li>';
+      }).join('');
+      box.innerHTML = h + (sec('School License Administrator', school) + sec('District Administrator', district) + sec('Teacher seat(s)', seats) || '<p class="crm-small crm-muted" style="margin:0;">No School or District Administrator assignments or teacher seats found for this account.</p>');
     });
   }
   function override() {
