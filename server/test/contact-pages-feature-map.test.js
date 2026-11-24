@@ -55,14 +55,21 @@ const exportsInCode = sorted(ROUTES_SRC.match(/module\.exports = \{([^}]*)\}/)[1
 const fetchCount = (OLD.match(/\bfetch\(/g) || []).length;
 const pageUrls = [...OLD.matchAll(/\bfetch\((?:'([^']+)'|`([^`]+)`)/g)].map(m => (m[1] || m[2]).replace(/\$\{[^}]*\}/g, ':p'));
 
-test('FUNCTIONS: every function on the older page is on the map, and one that disappears is marked moved or dropped', () => {
-  assert.ok(pageFunctions.length > 50, 'the page was read');
-  compare('functions', pageFunctions, MAP.functions);
+// Phase 6: the older page is retired, so there is nothing on it to compare. What the map still proves: every function it HAD is marked moved (with the text that proves it lives on the new screens),
+// internal or dropped (with its reason), and nothing is left "planned".
+const settled = (kind, entries) => { for (const [name, e] of Object.entries(entries)) { checkEntry(`${kind} ${name}`, e); assert.notEqual(e.status, 'planned', `${kind} ${name} is still planned, but the older page is retired`); } };
+
+test('RETIRED: the older page is a redirect stub (no function, no fetch, no wiring), and every function it had is marked moved, internal or dropped', () => {
+  assert.equal(pageFunctions.length, 0, 'the older page has no functions of its own any more');
+  assert.equal(fetchCount, 0, 'and calls nothing');
+  assert.deepEqual(pageWiring, []);
+  assert.match(OLD, /window\.location\.replace\(to\)/); assert.match(OLD, /admin-crm-contacts\.html/); assert.match(OLD, /admin-crm-contact\.html\?id='/);
+  assert.ok(Object.keys(MAP.functions).length > 50, 'the map still remembers what the page had');
+  settled('functions', MAP.functions);
 });
 
-test('EVENT WIRING: every control wired with addEventListener on the older page is on the map', () => {
-  assert.ok(pageWiring.includes('searchInput') && pageWiring.includes('document'), 'the wiring was read');
-  compare('wiring', pageWiring, MAP.wiring);
+test('EVENT WIRING: every control the older page wired is marked moved or dropped', () => {
+  settled('wiring', MAP.wiring);
 });
 
 test('ROUTES: every route in routes/newsletter.js is on the map, and none is removed (they are shared with other pages)', () => {
@@ -71,13 +78,14 @@ test('ROUTES: every route in routes/newsletter.js is on the map, and none is rem
   for (const [key, r] of Object.entries(MAP.routes)) assert.equal(r.status, 'stays', `${key}: a route is never "moved"; only its callers move`);
 });
 
-test('PAGE CALLS: every URL the older page fetches is on the map, so no call can be forgotten', () => {
-  assert.equal(pageUrls.length, fetchCount, 'every fetch() on the page has a literal URL (a computed URL would hide a call from this check)');
-  const known = new Set(Object.values(MAP.routes).map(r => r.pageUrl).filter(Boolean).concat(Object.keys(MAP.externalCalls)));
-  assert.deepEqual(sorted(pageUrls.filter(u => !known.has(u))), [], 'URLs the page calls that are not on the map');
-  const used = new Set(pageUrls);
-  for (const [key, r] of Object.entries(MAP.routes)) if (r.pageUrl) assert.ok(used.has(r.pageUrl), `${key}: the map says the older page calls ${r.pageUrl}, but it does not`);
-  for (const [u, e] of Object.entries(MAP.externalCalls)) { checkEntry(`external ${u}`, e); if (!used.has(u)) assert.ok(['moved', 'dropped'].includes(e.status), `${u} is no longer called but is not marked moved or dropped`); }
+test('PAGE CALLS: every URL the older page used to call is marked moved or dropped', () => {
+  assert.deepEqual(pageUrls, [], 'the redirect stub calls nothing');
+  settled('externalCalls', MAP.externalCalls);
+  for (const [key, r] of Object.entries(MAP.routes)) assert.equal(r.status, 'stays', `${key}: a route is never "moved"; only its callers move`);
+});
+
+test('NOTHING IS LEFT PLANNED: phase 6 is done, so no row of the map is waiting on a phase', () => {
+  for (const sect of ['functions', 'wiring', 'routes', 'externalCalls', 'references', 'exports']) for (const [n, e] of Object.entries(MAP[sect])) assert.notEqual(e.status, 'planned', `${sect} ${n} is still planned`);
 });
 
 test('EXPORTS AND REQUIRERS: the route file is also a library; whatever it exports and every file that imports it is on the map', () => {

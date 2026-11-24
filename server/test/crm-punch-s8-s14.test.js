@@ -191,7 +191,7 @@ test('S11: the page is for noindex admin use, loads the shared assets, escapes w
   const root = path.join(env.SERVER, '..');
   const html = fs.readFileSync(path.join(root, 'admin-crm-audit.html'), 'utf8');
   assert.match(html, /<meta name="robots" content="noindex">/);
-  assert.match(html, /admin-nav\.js\?v=40/); assert.match(html, /admin-common\.js\?v=18/); assert.match(html, /crm-common\.js\?v=3/); assert.match(html, /admin-shell\.js\?v=13/);
+  assert.match(html, /admin-nav\.js\?v=41/); assert.match(html, /admin-common\.js\?v=18/); assert.match(html, /crm-common\.js\?v=3/); assert.match(html, /admin-shell\.js\?v=13/);
   assert.doesNotMatch(html, /fonts\.googleapis|cdn\.|unpkg|jsdelivr|cdnjs/i);
   assert.doesNotMatch(html.replace('onclick="fnToggleTheme()"', ''), /onclick=|onerror=/);
   assert.match(html, /esc\(e\.action\)/); assert.match(html, /esc\(pretty\(e\.before\)\)/);

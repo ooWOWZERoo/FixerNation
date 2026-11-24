@@ -36,7 +36,7 @@ const emailed = [];
 const stubs = {
   [path.join(SERVER, 'db/pool.js')]: pool,
   [path.join(SERVER, 'middleware/auth.js')]: { requireAuth: (req, res, next) => (req.get('x-admin') ? ((req.user = { userId: 1, username: 'staff' }), next()) : res.status(401).json({ error: 'no' })), getAuthUser: () => null },
-  [path.join(SERVER, 'routes/newsletter.js')]: { attachPurchaseDetails: async () => [] },
+  [path.join(SERVER, 'lib/purchases.js')]: { attachPurchaseDetails: async () => [] },
   [path.join(SERVER, 'lib/mailer.js')]: { sendInvoiceEmail: async (m) => { emailed.push(m); } },
   [path.join(SERVER, 'lib/automations.js')]: { fireAutomation: async () => {} },
   [path.join(SERVER, 'lib/affiliate-attribution.js')]: { approveForInvoice: async () => {}, reverseForInvoice: async () => {} },

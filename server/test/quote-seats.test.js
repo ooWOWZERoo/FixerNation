@@ -63,7 +63,7 @@ const fakePool = {
 };
 const stubs = {
   [path.join(SERVER, 'db/pool.js')]: fakePool,
-  [path.join(SERVER, 'routes/newsletter.js')]: { createPurchase: async (contactId, args) => { purchases.push(args); return 55; } },
+  [path.join(SERVER, 'lib/purchases.js')]: { createPurchase: async (contactId, args) => { purchases.push(args); return 55; } },
   [path.join(SERVER, 'lib/automations.js')]: { fireAutomation: async () => {} },
   [path.join(SERVER, 'routes/checkout.js')]: { createSetPasswordUrl: async () => '' },
   [path.join(SERVER, 'lib/mailer.js')]: { sendAutomationEmail: async () => {}, sendSalesAlertEmail: async () => {} },

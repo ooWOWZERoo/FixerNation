@@ -114,16 +114,16 @@ test('THE SCROLL LOGIC, SIMULATED: with the group already shown from the last an
   api.keepActiveVisible(); assert.ok(w.topOf('support') >= 0 && w.topOf('support') + w.H <= w.WINDOW, 'now in view');
 });
 
-test('VERSIONS: admin-common.css v23, admin-nav.js v40 and admin-shell.js v13 on every admin page that loads them, and the notes say so', () => {
+test('VERSIONS: admin-common.css v23, admin-nav.js v41 and admin-shell.js v13 on every admin page that loads them, and the notes say so', () => {
   const pages = fs.readdirSync(ROOT).filter(f => /^admin-.*\.html$/.test(f)); // (the school and district portals have their own nav and styles)
   let n = 0;
   for (const f of pages) {
     const html = read(f);
-    if (/src="admin-nav\.js\?v=/.test(html)) { n++; assert.match(html, /src="admin-nav\.js\?v=40"/, f); }
+    if (/src="admin-nav\.js\?v=/.test(html)) { n++; assert.match(html, /src="admin-nav\.js\?v=41"/, f); }
     if (/src="admin-shell\.js\?v=/.test(html)) assert.match(html, /src="admin-shell\.js\?v=13"/, f);
     if (/admin-common\.css\?v=/.test(html)) assert.match(html, /admin-common\.css\?v=23/, f);
   }
   assert.ok(n > 40, `${n} pages load the nav`);
-  assert.match(read('CLAUDE.md'), /admin-common\.css v23, admin-nav\.js v40, admin-shell\.js v13/);
+  assert.match(read('CLAUDE.md'), /admin-common\.css v23, admin-nav\.js v41, admin-shell\.js v13/);
   for (const f of ['admin-nav.js', 'admin-shell.js']) assert.doesNotThrow(() => new vm.Script(read(f)), f);
 });

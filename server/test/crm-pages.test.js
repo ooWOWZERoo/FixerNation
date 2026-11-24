@@ -16,7 +16,7 @@ test('PAGES: all eleven Customer Hub pages exist and load the shared admin asset
   for (const f of PAGES) {
     assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} exists`);
     const html = read(f);
-    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=40"><\/script>/, f);
+    assert.match(html, /<aside class="a-sidebar"><\/aside>\s*<script src="admin-nav\.js\?v=41"><\/script>/, f);
     assert.match(html, /admin-common\.css\?v=23/, f);
     assert.match(html, /admin-common\.js\?v=18/, f);
     assert.match(html, /admin-shell\.js\?v=13/, f);
@@ -32,7 +32,7 @@ test('VERSIONS: every admin page that loads the nav or the shell loads the curre
   assert.ok(pages.length > 25);
   for (const f of pages) {
     const html = read(f);
-    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=40/, f);
+    if (/admin-nav\.js\?v=/.test(html)) assert.match(html, /admin-nav\.js\?v=41/, f);
     if (/admin-shell\.js\?v=/.test(html)) assert.match(html, /admin-shell\.js\?v=13/, f);
   }
 });
@@ -86,15 +86,19 @@ test('VOCABULARY: the screens only ever say Suspect, Prospect and Customer', () 
   assert.match(read('crm-common.js'), /CLASS_LABEL = \{ suspect: 'Suspect', prospect: 'Prospect', customer: 'Customer' \}/);
 });
 
-test('OLD CONTACTS PAGE: gets the label column and filter only while the Customer Hub is on, and does not touch the subscription Status', () => {
+test('THE OLD CRM PAGE IS A REDIRECT (merge phase 6): it points at the Contacts list, the side menu and the dashboard open the Contacts list, and the label column and filter live on the list', () => {
   const html = read('admin-newsletter.html');
-  assert.match(html, /id="filterClass"[^>]*style="display:none;"/, 'the filter starts hidden');
-  assert.match(html, /fetch\('\/api\/crm\/me'/);
-  assert.match(html, /filterClass && \(c\.crmClassification \|\| 'suspect'\) !== filterClass/);
-  assert.match(html, /status: `<td><span class="a-pill \$\{subscribed \? 'a-pill-success' : 'a-pill-neutral'\}">/, 'the Status column is unchanged');
-  assert.doesNotMatch(html, /\b(hot|warm|cold)\b\s*(lead|label)/i);
-  const route = read('server/lib/contact-records.js'); // moved out of routes/newsletter.js in merge phase 3 (shared with the merged Contacts screen)
-  assert.match(route, /crmClassification: row\.crm_classification \|\| null/);
+  assert.match(html, /http-equiv="refresh" content="3; url=admin-crm-contacts\.html"/); assert.match(html, /name="robots" content="noindex"/);
+  assert.doesNotMatch(html, /\/api\/|fetch\(/, 'the stub calls nothing');
+  const nav = read('admin-nav.js');
+  assert.match(nav, /link\('admin-crm-contacts\.html',\s+'✉️', 'Contacts', ' data-contacts-top'\)/); assert.doesNotMatch(nav, /link\('admin-newsletter\.html'/, 'the menu no longer opens the retired page');
+  assert.match(nav, /a\[data-contacts-top\]/, 'the Marketing & CRM item hides while the Customer Hub group shows the same link');
+  const dash = read('admin-dashboard.html');
+  assert.doesNotMatch(dash, /admin-newsletter/); assert.equal((dash.match(/href="admin-crm-contacts\.html"/g) || []).length, 2, 'both dashboard buttons open the Contacts list');
+  assert.match(read('mission-control-static-files.txt'), /^admin-newsletter\.html$/m, 'the stub is still deployed');
+  const list = read('admin-crm-contacts.html');
+  assert.match(list, /id="fClass"/); assert.match(list, /key: 'label'[^}]*hub: true/); assert.match(list, /\(hub \? '<label class="crm-sr" for="fClass">/, 'the label filter shows only while the Hub is on');
+  assert.match(read('server/lib/contact-records.js'), /crmClassification: row\.crm_classification \|\| null/);
 });
 
 test('NO CDN OR RUNTIME TEXT-TO-SPEECH in the new files', () => {

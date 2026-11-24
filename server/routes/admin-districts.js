@@ -329,7 +329,7 @@ async function unlinkedDomains(q) {
 
 // A school can be added before any license exists (allowUnlicensed). It then has nothing to link to:
 // licenses, school admins and teacher seats all hang off purchases. It links itself later, because
-// routes/newsletter.js createPurchase()/PUT purchase call findOrCreateSchoolId(domain), which finds
+// lib/purchases.js createPurchase()/PUT purchase call findOrCreateSchoolId(domain), which finds
 // THIS row by its exact (normalized, lower-case) domain. So the spelling has to be right, and we guard
 // against typos: strict hostname shape, plus a warning when it is close to a domain we already know.
 const isPlausibleDomain = (d) => d.length <= 255 && /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(d);

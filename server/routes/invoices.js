@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
-const { attachPurchaseDetails } = require('./newsletter');
+const { attachPurchaseDetails } = require('../lib/purchases');
 const { sendInvoiceEmail } = require('../lib/mailer');
 const { fireAutomation } = require('../lib/automations');
 const { approveForInvoice, reverseForInvoice } = require('../lib/affiliate-attribution');

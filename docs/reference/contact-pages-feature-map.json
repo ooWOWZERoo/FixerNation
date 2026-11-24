@@ -1043,21 +1043,26 @@
  "references": {
   "admin-nav.js": {
    "what": "The side-menu item named CRM",
-   "status": "planned",
-   "phase": 6,
-   "note": "Repoint and rename to Contacts (D9)"
+   "status": "moved",
+   "note": "Done in phase 6: the Marketing & CRM item is now Contacts and opens the Contacts list (D9); it hides while the Customer Hub group shows the same link",
+   "proof": {
+    "file": "admin-nav.js",
+    "includes": "link('admin-crm-contacts.html',       '\u2709\ufe0f', 'Contacts'"
+   }
   },
   "admin-dashboard.html": {
    "what": "Two buttons: Manage Newsletter Contacts, View All",
-   "status": "planned",
-   "phase": 6,
-   "note": "Repoint to the Contacts list"
+   "status": "moved",
+   "note": "Done in phase 6: both dashboard buttons open the Contacts list",
+   "proof": {
+    "file": "admin-dashboard.html",
+    "includes": "Manage Contacts</a>"
+   }
   },
   "mission-control-static-files.txt": {
    "what": "The list of static files that are deployed",
-   "status": "planned",
-   "phase": 6,
-   "note": "Keep admin-newsletter.html listed: it becomes the redirect"
+   "status": "stays",
+   "note": "Stays: admin-newsletter.html is still listed because it is now the redirect stub, so it keeps being deployed"
   },
   "admin-crm-contact.html": {
    "what": "The note and link on the person card for fields not in the pop-up yet",
@@ -1070,15 +1075,13 @@
   },
   "server/test/crm-pages.test.js": {
    "what": "Pins the older page (the label column)",
-   "status": "planned",
-   "phase": 6,
-   "note": "Update when the page is retired"
+   "status": "stays",
+   "note": "Stays: the test now pins the redirect stub"
   },
   "server/test/crm-contact-details-edit.test.js": {
    "what": "Pins the link to the older page and its ?edit= arrival",
-   "status": "planned",
-   "phase": 6,
-   "note": "Remove those two checks at phase 3 or 6"
+   "status": "stays",
+   "note": "Stays: the test now pins the stub's ?edit= redirect"
   },
   "server/scripts/alter-add-quote-school-domain.js": {
    "what": "A comment only",
@@ -1087,27 +1090,31 @@
   },
   "tests/e2e/admin-newsletter.spec.ts": {
    "what": "End-to-end spec for the older page (list, add, edit, delete, groups)",
-   "status": "planned",
-   "phase": 6,
-   "note": "Rewrite against the new screens; it is the best checklist of what staff do"
+   "status": "stays",
+   "note": "Rewritten in phase 6 for the Contacts list (create, edit, group, delete); it keeps one check that the old address redirects"
   },
   "tests/e2e/crm-export-respects-filters.spec.ts": {
    "what": "Export respects the filters (T4)",
-   "status": "planned",
-   "phase": 6,
-   "note": "Rewrite"
+   "status": "moved",
+   "note": "Rewritten in phase 6 against the Contacts list and the server-side export",
+   "proof": {
+    "file": "tests/e2e/crm-export-respects-filters.spec.ts",
+    "includes": "/api/admin/contacts"
+   }
   },
   "tests/e2e/newsletter-subscribe.spec.ts": {
    "what": "Public sign-up appears in the contact list",
-   "status": "planned",
-   "phase": 6,
-   "note": "Rewrite to look in the new list"
+   "status": "moved",
+   "note": "Rewritten in phase 6: the public sign-up is looked for on the Contacts list",
+   "proof": {
+    "file": "tests/e2e/newsletter-subscribe.spec.ts",
+    "includes": "#fQ"
+   }
   },
   "tests/e2e/admin-crm-smoke.spec.ts": {
    "what": "Opens the older page in the Customer Hub smoke run",
-   "status": "planned",
-   "phase": 6,
-   "note": "Repoint"
+   "status": "stays",
+   "note": "Repointed in phase 6: the label filter is checked on the Contacts list, and the old address redirects"
   },
   "tests/e2e/admin-social.spec.ts": {
    "what": "A comment only",
@@ -1138,30 +1145,6 @@
     "router"
    ],
    "note": "Mounts the routes"
-  },
-  "server/routes/checkout.js": {
-   "uses": [
-    "createPurchase"
-   ],
-   "note": "Card checkout creates the purchase"
-  },
-  "server/routes/quote-accept.js": {
-   "uses": [
-    "createPurchase"
-   ],
-   "note": "Accepting a quote creates the purchase"
-  },
-  "server/routes/site-auth.js": {
-   "uses": [
-    "attachPurchaseDetails"
-   ],
-   "note": "A person's own purchases"
-  },
-  "server/routes/invoices.js": {
-   "uses": [
-    "attachPurchaseDetails"
-   ],
-   "note": "Invoice line items"
   }
  },
  "exports": {
@@ -1170,19 +1153,28 @@
    "note": "The route file stays: public sign-up, unsubscribe and the Licenses, Quotes, Campaigns, Morning Boost, Orders and School Admins pages call it"
   },
   "createPurchase": {
-   "status": "planned",
-   "phase": 6,
-   "note": "Move to server/lib/ before the page is retired; checkout.js and quote-accept.js import it"
+   "status": "moved",
+   "note": "Moved in phase 4 to server/lib/purchases.js; checkout.js and quote-accept.js now require it from there",
+   "proof": {
+    "file": "server/lib/purchases.js",
+    "includes": "async function createPurchase"
+   }
   },
   "attachPurchaseDetails": {
-   "status": "planned",
-   "phase": 6,
-   "note": "Move to server/lib/; site-auth.js and invoices.js import it"
+   "status": "moved",
+   "note": "Moved in phase 4 to server/lib/purchases.js; site-auth.js and invoices.js now require it from there",
+   "proof": {
+    "file": "server/lib/purchases.js",
+    "includes": "async function attachPurchaseDetails"
+   }
   },
   "assignContactToGroups": {
-   "status": "planned",
-   "phase": 6,
-   "note": "Exported but only used inside newsletter.js; move to server/lib/ with the others"
+   "status": "moved",
+   "note": "Moved in phase 4 to server/lib/purchases.js (used by createPurchase)",
+   "proof": {
+    "file": "server/lib/purchases.js",
+    "includes": "async function assignContactToGroups"
+   }
   }
  }
 }

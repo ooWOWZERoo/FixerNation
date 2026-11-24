@@ -13,7 +13,7 @@ const { updateContact: updateContactLib } = require('../lib/contact-edit');
 const { rolesForContact: rolesForContactLib } = require('../lib/contact-roles');
 const { deleteContact: deleteContactAction, resendVerification: resendVerificationAction } = require('../lib/contact-actions'); // shared with routes/contact-screens.js
 const P = require('../lib/purchases'); // purchases and seats: one copy, shared with routes/contact-screens.js (merge phase 4)
-const { PRODUCT_TYPES, normalizeDomain, findOrCreateSchoolId, toSqlLike, attachPurchaseDetails, createPurchase, assignContactToGroups } = P;
+const { PRODUCT_TYPES, normalizeDomain, findOrCreateSchoolId, toSqlLike, attachPurchaseDetails, createPurchase } = P;
 const crmHooks = require('../lib/crm-hooks'); // Sales CRM: re-derive Suspect / Prospect / Customer after a purchase changes (never throws; off unless crm_v2_enabled)
 
 const router = express.Router();
@@ -554,4 +554,4 @@ router.post('/contacts/import', requireAuth, async (req, res) => {
   res.json({ imported, updated, skippedInvalid, groupsCreated, groupsSkipped });
 });
 
-module.exports = { router, attachPurchaseDetails, createPurchase, assignContactToGroups };
+module.exports = { router };

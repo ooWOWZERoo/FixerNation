@@ -12,7 +12,7 @@
 // For card checkouts the code is stashed in the Stripe session's metadata at
 // session-creation time (where the cookie IS present) and read back out in the
 // webhook. Attribution for every path ultimately lands in one place,
-// createPurchase() in routes/newsletter.js, which calls attributePurchase()
+// createPurchase() in lib/purchases.js, which calls attributePurchase()
 // inside its own transaction.
 const pool = require('../db/pool');
 

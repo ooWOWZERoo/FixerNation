@@ -77,7 +77,14 @@ test('THE PAGE: an Edit details button opens a pop-up with the whole card and sa
   assert.doesNotThrow(() => new (require('node:vm').Script)([...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].pop()[1]));
 });
 
-test('THE ARRIVAL for the fields not here yet: admin-newsletter.html?edit=<id> still opens that person\'s Edit Contact box once the contacts are loaded, only for a whole-number id that is in the list', () => {
+test('THE OLD ADDRESS (phase 6): admin-newsletter.html?edit=<id> sends a whole-number id to that person\'s page with Edit details open, and anything else to the Contacts list', () => {
   const page = fs.readFileSync(path.join(env.SERVER, '..', 'admin-newsletter.html'), 'utf8');
-  assert.match(page, /fetchAndRenderContacts\(\)\.then\(function \(\) \{\s*const want = Number\(new URLSearchParams\(window\.location\.search\)\.get\('edit'\)\);\s*if \(Number\.isInteger\(want\) && want > 0 && contactsCache\.some\(function \(x\) \{ return x\.id === want; \}\)\) editContact\(want\);/);
+  assert.match(page, /Number\(new URLSearchParams\(window\.location\.search\)\.get\('edit'\)\)/);
+  assert.match(page, /Number\.isInteger\(edit\) && edit > 0 \? 'admin-crm-contact\.html\?id=' \+ edit \+ '&edit=1' : 'admin-crm-contacts\.html'/);
+  // Run the stub's script for real: the address it would go to.
+  const script = [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].pop()[1];
+  const go = (search) => { const out = {}; new (require('node:vm').Script)(script).runInNewContext({ window: { location: { search, replace: (u) => { out.to = u; } } }, URLSearchParams, Number, document: { getElementById: () => ({ setAttribute() {} }) } }); return out.to; };
+  assert.equal(go('?edit=42'), 'admin-crm-contact.html?id=42&edit=1');
+  for (const bad of ['', '?edit=0', '?edit=-3', '?edit=4.5', '?edit=abc', '?edit=1;alert(1)', '?edit=%3Cscript%3E']) assert.equal(go(bad), 'admin-crm-contacts.html', bad);
+  assert.doesNotMatch(page, /fetch\(|fnRequireAuth|innerHTML/, 'the stub does no work and writes no HTML');
 });

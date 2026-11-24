@@ -1,6 +1,6 @@
 /* Fixer Nation — shared admin sidebar navigation.
    Every admin page has an empty <aside class="a-sidebar"></aside> placeholder
-   followed immediately by <script src="admin-nav.js?v=40"></script>.
+   followed immediately by <script src="admin-nav.js?v=41"></script>.
    This script populates it synchronously and marks the active link. */
 (function () {
   // Error capture (Release 122): load the shared reporter once per page.
@@ -97,7 +97,7 @@
       link('admin-morning-boost-email.html','📨', 'Morning Boost Email'),
     ]},
     { key: 'marketing-crm', cat: 'marketing', label: 'Marketing &amp; CRM', links: [
-      link('admin-newsletter.html',         '✉️', 'CRM'),
+      link('admin-crm-contacts.html',       '✉️', 'Contacts', ' data-contacts-top'), // the same page as Customer Hub > Contacts; shown here only while the Hub group is hidden (the Hub switched off or no Hub role), so the contact list is always one click away
       link('admin-campaigns.html',          '📣', 'Campaigns'),
       link('admin-automations.html',        '🤖', 'Automations'),
     ]},
@@ -200,6 +200,9 @@
       if (before !== null && link.getClientRects().length) navEl.scrollTop += link.getBoundingClientRect().top - before;
       else { restoreNavScroll(); keepActiveVisible(); } // this page's own link was inside the group: put the menu back as it was
     }
+    // Marketing & CRM > Contacts is the same page as Customer Hub > Contacts, so it shows only while the Hub group does not.
+    var topContacts = aside.querySelector('a[data-contacts-top]');
+    if (topContacts && topContacts.style) topContacts.style.display = perms ? 'none' : '';
     // The top bar's Customer Hub button follows the same answer (admin-shell.js listens).
     window.__fnCrmOn = !!perms;
     try { window.dispatchEvent(new CustomEvent('fn-crm-nav', { detail: { on: !!perms } })); } catch (e) { /* old browser */ }

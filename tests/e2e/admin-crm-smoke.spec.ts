@@ -162,7 +162,7 @@ test.describe("Customer Hub: CRM Admin", () => {
     await expect(page.locator(".crm-col[data-stage=discovery] .crm-deal", { hasText: BOARD_DEAL })).toBeVisible();
   });
 
-  test("saved views are links, the list filters by them, and the old contacts page has the label column and filter", async ({ page }) => {
+  test("saved views are links, the list filters by them, and the Contacts list has the label column and filter (and the old CRM address redirects to it)", async ({ page }) => {
     await page.goto("/admin-crm-opportunities.html");
     await page.getByRole("link", { name: "My opportunities" }).click();
     await expect(page).toHaveURL(/owner=me/);
@@ -172,13 +172,18 @@ test.describe("Customer Hub: CRM Admin", () => {
     await page.goto("/admin-crm-contacts.html?classification=prospect&includeTest=true");
     await expect(page.getByRole("row", { name: new RegExp(PERSON_NAME) })).toBeVisible();
 
+    // The older CRM page is retired (contact screens merge, phase 6): its label filter and column now live on this same Contacts list.
+    await page.goto("/admin-crm-contacts.html?includeTest=true");
+    await expect(page.locator("#fClass")).toBeVisible();
+    await expect(page.locator("#cBody thead")).toContainText("Label");
+    await page.locator("#fClass").selectOption("prospect");
+    await expect(page.locator("#cBody tbody tr", { hasText: PERSON_EMAIL })).toBeVisible();
+    await page.locator("#fClass").selectOption("customer");
+    await expect(page.locator("#cBody tbody tr", { hasText: PERSON_EMAIL })).toHaveCount(0);
+
+    // An old bookmark still lands on the Contacts list.
     await page.goto("/admin-newsletter.html");
-    await expect(page.locator("#filterClass")).toBeVisible();
-    await expect(page.locator("#contactsTableHead")).toContainText("Customer Hub Label");
-    await page.locator("#filterClass").selectOption("prospect");
-    await expect(page.locator("#contactsTable tbody tr", { hasText: PERSON_EMAIL })).toBeVisible();
-    await page.locator("#filterClass").selectOption("customer");
-    await expect(page.locator("#contactsTable tbody tr", { hasText: PERSON_EMAIL })).toHaveCount(0);
+    await expect(page).toHaveURL(/admin-crm-contacts\.html/);
   });
 
   test("settings: a CRM Admin sees stages, loss reasons and roles", async ({ page }) => {

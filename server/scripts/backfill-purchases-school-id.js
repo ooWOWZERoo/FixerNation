@@ -1,7 +1,7 @@
 // Fixes group_license purchases whose school_domain was set (at creation or
 // later edit) after the one-time alter-create-schools-and-branding.js
 // migration ran, since no code path back-filled purchases.school_id going
-// forward until server/routes/newsletter.js's createPurchase()/PUT
+// forward until server/lib/purchases.js's createPurchase()/PUT
 // /purchases/:id were fixed to do it themselves. Without school_id, school
 // branding can't resolve a school for the purchase ("This school has no
 // school record yet"). Idempotent — safe to re-run any time.

@@ -11,7 +11,7 @@ import { signInAsAdmin } from "./helpers/auth";
 // list" message in that case, not the same success text. That's a deliberate
 // design choice, not a bug: re-subscribing is a no-op on the backend (no new
 // row), and the UI is explicit about it rather than pretending it worked.
-// Also verifies the subscriber appears exactly once in the admin view.
+// Also verifies the subscriber appears exactly once on the admin Contacts list.
 // ---------------------------------------------------------------------------
 
 test.describe.configure({ mode: "serial" });
@@ -69,18 +69,20 @@ test.describe("Newsletter subscribe", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 3. Admin verification — subscriber appears exactly once
+  // 3. Admin verification: the subscriber appears exactly once on the Contacts list
+  //    (the older CRM page is retired; this is the merged Contacts screen). A public sign-up is
+  //    Subscribed, source Homepage. Test addresses (@example.com) are hidden unless ticked.
   // -------------------------------------------------------------------------
-  test("admin: subscriber appears exactly once in newsletter contacts", async ({ page }) => {
+  test("admin: subscriber appears exactly once in the Contacts list", async ({ page }) => {
     await signInAsAdmin(page);
-    await page.goto("/admin-newsletter.html");
+    await page.goto("/admin-crm-contacts.html");
+    await page.locator("#fTest").check();
 
-    // #searchInput filters live via an input-event listener — no Enter needed.
-    await page.locator("#searchInput").fill(EMAIL);
+    // #fQ filters on the server as you type: no Enter needed.
+    await page.locator("#fQ").fill(EMAIL);
 
-    // First result must be visible, and there must be exactly one match
-    const matches = page.getByText(EMAIL);
-    await expect(matches.first()).toBeVisible({ timeout: 10000 });
-    await expect(matches).toHaveCount(1);
+    const matches = page.locator("#cBody tbody tr").filter({ hasText: EMAIL });
+    await expect(matches).toHaveCount(1, { timeout: 10000 });
+    await expect(matches.first()).toContainText("Subscribed");
   });
 });
