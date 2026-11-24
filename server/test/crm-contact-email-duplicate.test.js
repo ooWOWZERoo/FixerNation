@@ -12,6 +12,8 @@ require('express-async-errors');
 const SERVER = path.join(__dirname, '..');
 const db = new DatabaseSync(':memory:');
 db.exec(`
+CREATE TABLE admin_users (id INTEGER PRIMARY KEY, crm_role TEXT NOT NULL DEFAULT 'admin'); -- the older contact routes now follow the CRM role matrix, so the stubbed admin (id 7) needs a row
+INSERT INTO admin_users (id, crm_role) VALUES (7, 'admin');
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT NOT NULL UNIQUE, phone TEXT, company TEXT, street TEXT, city TEXT, state TEXT, zip TEXT,
   ship_to_name TEXT, ship_to_company TEXT, ship_to_street TEXT, ship_to_city TEXT, ship_to_state TEXT, ship_to_zip TEXT, signup_date TEXT, source TEXT, status TEXT, notes TEXT);
 CREATE TABLE contact_groups (id INTEGER PRIMARY KEY, name TEXT);
@@ -43,7 +45,7 @@ const run = async (sql, rawParams = []) => {
 const conn = { query: run, beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release() {} };
 const stubs = {
   [path.join(SERVER, 'db/pool.js')]: { query: run, getConnection: async () => conn },
-  [path.join(SERVER, 'middleware/auth.js')]: { requireAuth: (req, res, next) => next(), getAuthUser: () => null },
+  [path.join(SERVER, 'middleware/auth.js')]: { requireAuth: (req, res, next) => { req.user = { userId: 7 }; next(); }, getAuthUser: () => null },
   [path.join(SERVER, 'lib/mailer.js')]: new Proxy({}, { get: () => async () => {} }),
   [path.join(SERVER, 'lib/automations.js')]: { fireAutomation: async () => {} },
   [path.join(SERVER, 'lib/affiliate-attribution.js')]: { attributePurchase: async () => {} },

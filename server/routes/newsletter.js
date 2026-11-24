@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { cleanParty } = require('../lib/invoice-parties');
 const { requireAuth, getAuthUser } = require('../middleware/auth');
+const { requireCrmRole } = require('../lib/crm-permissions'); // the routes only the retired CRM page used follow the CRM role matrix (works with the Hub off; a Read-only admin can look, nothing more)
 const { unsubscribeToken, sendVerificationEmail, esc } = require('../lib/mailer');
 const crypto = require('crypto');
 const { limiter, clientIp } = require('../lib/rate-limit');
@@ -106,20 +107,20 @@ router.get('/contacts/search', requireAuth, async (req, res) => {
 // Only fields present in the body are changed.
 // Full contact edit (name, email, phone, company, address, ship-to, source, status, notes, groups). The rules, including moving the sign-in account's email with the contact's, are in
 // lib/contact-edit.js, shared with the merged Contacts screen (routes/contact-screens.js).
-router.put('/contacts/:id', requireAuth, async (req, res) => {
+router.put('/contacts/:id', requireAuth, requireCrmRole('write'), async (req, res) => {
   const r = await updateContactLib(req.params.id, req.body);
   res.status(r.status).json(r.body);
 });
 
 // The rules for deleting a contact (a buyer is refused, a person on a deal is refused, CRM items need a CRM Admin to confirm, a sign-in account is closed) live in
 // lib/contact-actions.js, shared with the merged Contacts screen (routes/contact-screens.js).
-router.delete('/contacts/:id', requireAuth, async (req, res) => {
+router.delete('/contacts/:id', requireAuth, requireCrmRole('erase'), async (req, res) => {
   const r = await deleteContactAction(req.params.id, req.body, req.user);
   res.status(r.status).json(r.body);
 });
 
 // Ad-hoc admin-triggered resend of the sign-in account's verification email (lib/contact-actions.js, shared with the merged Contacts screen).
-router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) => {
+router.post('/contacts/:id/resend-verification', requireAuth, requireCrmRole('write'), async (req, res) => {
   const r = await resendVerificationAction(req.params.id);
   res.status(r.status).json(r.body);
 });
@@ -135,7 +136,7 @@ router.post('/contacts/:id/resend-verification', requireAuth, async (req, res) =
 // own id — newsletter_contacts and site_users are only ever linked by
 // matching email, never a direct FK — so this is a contact-id entry point
 // that resolves to a site_user first, then fans out from there.
-router.get('/contacts/:id/roles', requireAuth, async (req, res) => {
+router.get('/contacts/:id/roles', requireAuth, requireCrmRole('view'), async (req, res) => {
   const r = await rolesForContactLib(req.params.id);
   res.status(r.status).json(r.body);
 });
@@ -153,7 +154,7 @@ router.get('/groups', requireAuth, async (req, res) => {
   res.json({ groups: rows });
 });
 
-router.post('/groups', requireAuth, async (req, res) => {
+router.post('/groups', requireAuth, requireCrmRole('write'), async (req, res) => {
   const name = (req.body && req.body.name || '').trim();
   if (!name) return res.status(400).json({ error: 'Group name is required' });
   try {
@@ -167,7 +168,7 @@ router.post('/groups', requireAuth, async (req, res) => {
   }
 });
 
-router.delete('/groups/:id', requireAuth, async (req, res) => {
+router.delete('/groups/:id', requireAuth, requireCrmRole('write'), async (req, res) => {
   const [result] = await pool.query('DELETE FROM contact_groups WHERE id = ?', [req.params.id]);
   if (result.affectedRows === 0) return res.status(404).json({ error: 'Group not found' });
   res.json({ ok: true });
@@ -230,11 +231,11 @@ router.get('/purchases', requireAuth, async (req, res) => {
   });
 });
 
-router.get('/contacts/:id/purchases', requireAuth, async (req, res) => {
+router.get('/contacts/:id/purchases', requireAuth, requireCrmRole('view'), async (req, res) => {
   res.json({ purchases: await P.purchasesForContact(req.params.id) });
 });
 
-router.post('/contacts/:id/purchases', requireAuth, async (req, res) => {
+router.post('/contacts/:id/purchases', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
   const [contactRows] = await pool.query('SELECT * FROM newsletter_contacts WHERE id = ?', [req.params.id]);
   const contact = contactRows[0];
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
@@ -407,21 +408,21 @@ router.put('/purchases/:id/license-dates', requireAuth, async (req, res) => {
   res.json({ ok: true, licenseStatus, seatsRestored });
 });
 
-router.delete('/purchases/:id', requireAuth, async (req, res) => {
+router.delete('/purchases/:id', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
   const r = await P.deletePurchase(req.params.id);
   res.status(r.status).json(r.body);
 });
 
 // The three seat actions (assign an email, register directly, free a seat) live in lib/purchases.js, shared with the merged Contacts screen.
-router.put('/purchases/:purchaseId/seats/:seatId', requireAuth, async (req, res) => {
+router.put('/purchases/:purchaseId/seats/:seatId', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
   const r = await P.assignSeatEmail(req.params.purchaseId, req.params.seatId, req.body && req.body.invitedEmail);
   res.status(r.status).json(r.body);
 });
-router.post('/purchases/:purchaseId/seats/:seatId/register', requireAuth, async (req, res) => {
+router.post('/purchases/:purchaseId/seats/:seatId/register', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
   const r = await P.registerSeat(req.params.purchaseId, req.params.seatId, req.body && req.body.email);
   res.status(r.status).json(r.body);
 });
-router.post('/purchases/:purchaseId/seats/:seatId/unregister', requireAuth, async (req, res) => {
+router.post('/purchases/:purchaseId/seats/:seatId/unregister', requireAuth, requireCrmRole('manage_purchases'), async (req, res) => {
   const r = await P.unregisterSeat(req.params.purchaseId, req.params.seatId);
   res.status(r.status).json(r.body);
 });
@@ -465,7 +466,7 @@ router.put('/seats/:seatId/audiences', requireAuth, async (req, res) => {
 // Group membership (row.groups, an array of group names) is always additive
 // for both new and existing contacts — an import never removes a contact
 // from a group it wasn't mentioned for.
-router.post('/contacts/import', requireAuth, async (req, res) => {
+router.post('/contacts/import', requireAuth, requireCrmRole('write'), async (req, res) => {
   const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : [];
   const defaultSource = (req.body && req.body.defaultSource) || 'Bulk Import';
   const createMissingGroups = !!(req.body && req.body.createMissingGroups);

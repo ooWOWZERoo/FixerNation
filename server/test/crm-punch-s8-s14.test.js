@@ -229,7 +229,8 @@ test('S12: a person with CRM notes, tasks, files or meetings is still refused by
   assert.equal(plain.status, 409); assert.equal(plain.json.code, 'contact_has_crm_items'); assert.equal(plain.json.items, 4);
   assert.ok(get('SELECT id FROM newsletter_contacts WHERE id = ?', person));
   const asSales = await call('DELETE', `/api/newsletter/contacts/${person}`, { confirmEraseCrmItems: true }, sales);
-  assert.equal(asSales.status, 403); assert.equal(asSales.json.code, 'erase_needs_crm_admin');
+  // Since the older contact routes follow the role matrix, Sales is stopped by the route's own gate (delete is an erase action) before the second check inside the delete code is reached.
+  assert.equal(asSales.status, 403); assert.match(asSales.json.error, /does not allow this/);
   assert.ok(fs.existsSync(path.join(FILES, stored)), 'nothing was touched');
   const done = await call('DELETE', `/api/newsletter/contacts/${person}`, { confirmEraseCrmItems: true }, admin);
   assert.equal(done.status, 200, JSON.stringify(done.json)); assert.equal(done.json.erasedItems, 4);

@@ -14,6 +14,8 @@ process.env.UPLOADS_DIR = path.join(os.tmpdir(), 'fne-test-uploads');
 const SERVER = path.join(__dirname, '..');
 const db = new DatabaseSync(':memory:');
 db.exec(`
+CREATE TABLE admin_users (id INTEGER PRIMARY KEY, crm_role TEXT NOT NULL DEFAULT 'admin'); -- the older contact routes now follow the CRM role matrix, so the stubbed admin (id 7) needs a row
+INSERT INTO admin_users (id, crm_role) VALUES (7, 'admin');
 CREATE TABLE site_users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, first_name TEXT, last_name TEXT, is_sales_demo INTEGER DEFAULT 0, is_fne_staff INTEGER DEFAULT 0, role TEXT DEFAULT 'teacher', closed_at TEXT, session_invalidated_at TEXT);
 CREATE TABLE newsletter_contacts (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, name TEXT);
 CREATE TABLE purchases (id INTEGER PRIMARY KEY AUTOINCREMENT, contact_id INTEGER, license_status TEXT, expiration_date TEXT, school_domain TEXT, school_id INTEGER);
@@ -38,7 +40,7 @@ const run = async (sql, params = []) => {
 const noopProxy = new Proxy({}, { get: () => async () => ({}) });
 const stubs = {
   [path.join(SERVER, 'db/pool.js')]: { query: run, getConnection: async () => ({ query: run, beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release() {} }) },
-  [path.join(SERVER, 'middleware/auth.js')]: { requireAuth: (req, res, next) => next(), getAuthUser: () => null },
+  [path.join(SERVER, 'middleware/auth.js')]: { requireAuth: (req, res, next) => { req.user = { userId: 7 }; next(); }, getAuthUser: () => null },
   // the cookie value is the user id, so a test signs in as anyone by sending it
   [path.join(SERVER, 'lib/session-tokens.js')]: { verifySession: (kind, token) => ({ userId: Number(token), iat: Math.floor(Date.now() / 1000) }) },
   [path.join(SERVER, 'lib/safety/gateway.js')]: { screenContent: async () => ({ decision: 'allow' }), isPublishable: () => true },
