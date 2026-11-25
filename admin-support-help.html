@@ -26,26 +26,61 @@
 
     <div class="a-content">
 
-      <div class="a-card" style="max-width:900px;">
+      <div class="a-card" style="max-width:1000px;">
         <div class="a-card-head"><h2>Help center answers</h2></div>
         <div class="a-note" style="margin:0 0 12px;">
-          Answers live in <code>help-center.js</code> and change through a release. Visitors see only reviewed answers; drafts show at the preview link.
+          A saved change reaches visitors within a minute. Answers you haven't edited here still come from <code>help-center.js</code>. Visitors see only
+          published answers. Drafts show at the preview link while you're signed in.
         </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+          <input type="search" id="hcFind" placeholder="Search answers" aria-label="Search answers" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--a-border); border-radius:8px; background:var(--a-card); color:inherit;">
+          <select id="hcStatus" class="a-filter-select" aria-label="Show">
+            <option value="all">All answers</option>
+            <option value="published">Published</option>
+            <option value="draft">Drafts</option>
+            <option value="deleted">Deleted</option>
+            <option value="edited">Edited here</option>
+          </select>
+          <button type="button" class="a-btn a-btn-primary a-btn-sm" id="hcAdd">Add an answer</button>
           <a class="a-btn a-btn-outline a-btn-sm" href="help.html" target="_blank" rel="noopener">Open the Help center</a>
-          <a class="a-btn a-btn-outline a-btn-sm" href="help.html?preview=1" target="_blank" rel="noopener">Read the drafts (preview)</a>
+          <a class="a-btn a-btn-outline a-btn-sm" href="help.html?preview=1" target="_blank" rel="noopener">Read the drafts</a>
         </div>
+        <div id="hcCount" class="a-note" style="margin:0 0 10px;"></div>
         <table class="a-table" id="answersTable">
-          <thead><tr><th>Audience</th><th>Published</th><th>Drafts</th></tr></thead>
+          <thead><tr><th>Question</th><th>Topic</th><th>For</th><th>Status</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
-        <h3 style="margin:18px 0 6px; font-size:14px;">Drafts waiting for your read</h3>
-        <div id="draftNote" class="a-note" style="display:none; margin:0 0 10px; border-left:4px solid var(--a-warning,#b26a00);"></div>
-        <table class="a-table" id="draftsTable">
-          <thead><tr><th>Question</th><th>Topic</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div id="draftsEmpty" class="a-empty" style="display:none;">No drafts. Every answer has been reviewed.</div>
+        <div id="hcEmpty" class="a-empty" style="display:none;">No answers match.</div>
+      </div>
+
+      <div class="a-modal-overlay" id="hcOverlay">
+        <div class="a-modal" role="dialog" aria-modal="true" aria-labelledby="hcTitle" style="max-width:720px;">
+          <div class="a-modal-head"><h3 id="hcTitle">Edit answer</h3><button type="button" class="a-modal-close" id="hcClose" aria-label="Close">&times;</button></div>
+          <div class="a-modal-body">
+            <div class="a-field"><label for="hcQ">Question</label><input type="text" id="hcQ" maxlength="300"></div>
+            <div class="a-field"><label for="hcA">Answer</label><textarea id="hcA" rows="5" maxlength="1200"></textarea>
+              <div class="a-label-hint" id="hcAHint"></div></div>
+            <div class="a-field"><label for="hcSteps">Steps (optional, one per line)</label><textarea id="hcSteps" rows="3"></textarea></div>
+            <div class="a-field"><label for="hcTopic">Heading it sits under</label><input type="text" id="hcTopic" maxlength="60" list="hcTopics"><datalist id="hcTopics"></datalist></div>
+            <div class="a-field"><label>Who it is for</label><div id="hcAud" class="a-tag-row"></div></div>
+            <div class="a-form-row">
+              <div class="a-field"><label for="hcHelp">Get help topic it links to</label><select id="hcHelp"></select></div>
+              <div class="a-field"><label for="hcVideo">Video id (optional)</label><input type="text" id="hcVideo" maxlength="8" placeholder="A1"></div>
+              <div class="a-field"><label for="hcState">Status</label>
+                <select id="hcState"><option value="published">Published</option><option value="draft">Draft</option><option value="deleted">Deleted</option></select></div>
+            </div>
+            <div class="a-label-hint" id="hcId"></div>
+            <div id="hcMsg" class="a-note" style="display:none; margin-top:10px;"></div>
+            <div id="hcHistory" style="margin-top:12px;"></div>
+          </div>
+          <div class="a-modal-foot">
+            <button type="button" class="a-btn a-btn-outline a-btn-sm" id="hcHist">Earlier versions</button>
+            <button type="button" class="a-btn a-btn-outline a-btn-sm" id="hcRevert" style="display:none;">Revert to the original</button>
+            <span style="flex:1"></span>
+            <button type="button" class="a-btn a-btn-outline a-btn-sm" id="hcCancel">Cancel</button>
+            <button type="button" class="a-btn a-btn-primary a-btn-sm" id="hcSave">Save</button>
+          </div>
+        </div>
       </div>
 
       <div class="a-card" style="max-width:900px; margin-top:24px;">
@@ -82,30 +117,220 @@
 </div>
 
 <script src="admin-common.js?v=18"></script>
-<script src="help-center.js?v=16"></script>
+<script src="help-center.js?v=17"></script>
 <script src="help-videos.js?v=25"></script>
 <script>
 function cell(text) { const td = document.createElement('td'); td.textContent = text; return td; }
 function row(cells) { const tr = document.createElement('tr'); cells.forEach(function (c) { tr.appendChild(c); }); return tr; }
 
-(function renderAnswers() {
-  const hc = window.FNHelpCenter;
-  const tb = document.querySelector('#answersTable tbody');
-  hc.audiences.forEach(function (a) {
-    const mine = hc.entries.filter(function (e) { return e.for.indexOf(a.id) !== -1; });
-    tb.appendChild(row([cell(a.title), cell(String(mine.filter(function (e) { return e.reviewed; }).length)), cell(String(mine.filter(function (e) { return !e.reviewed; }).length))]));
-  });
-  const drafts = hc.entries.filter(function (e) { return !e.reviewed; });
-  tb.appendChild(row([cell('All answers (one answer can serve several audiences)'), cell(String(hc.entries.length - drafts.length)), cell(String(drafts.length))]));
-  const dt = document.querySelector('#draftsTable tbody');
-  drafts.forEach(function (e) { dt.appendChild(row([cell(e.q), cell(e.topic)])); });
-  document.getElementById('draftsEmpty').style.display = drafts.length ? 'none' : 'block';
-  document.getElementById('draftsTable').style.display = drafts.length ? '' : 'none';
-  if (drafts.some(function (e) { return e.id === 'student-data-retention'; })) {
-    const n = document.getElementById('draftNote');
-    n.textContent = 'The answer on how long student data is kept is still a draft: what the system does (kept until a teacher archives or an administrator deletes; only Brain Games activity is purged on a schedule) does not match "purged at the end of the school year". It needs a data-handling decision before it can be published.';
-    n.style.display = 'block';
+(function helpEditor() {
+  const HC = window.FNHelpCenter;
+  const $ = function (id) { return document.getElementById(id); };
+  const HELP_TOPICS = [
+    ['cant_sign_in', "I can't sign in"], ['invitation_or_seat', 'An invitation or a seat'], ['students_or_classroom', 'Students or a classroom'],
+    ['parents', 'Parents'], ['billing_or_license', 'Billing or a license'], ['something_broke', 'Something is broken'], ['other', 'Something else']
+  ];
+  let rows = [];            // what staff have saved so far (admin API)
+  let editing = null;       // { id, isNew, base }
+
+  function clone(x) { return JSON.parse(JSON.stringify(x)); }
+  function rowFor(id) { return rows.filter(function (r) { return r.id === id; })[0] || null; }
+  function inBase(id) { return HC.base.some(function (b) { return b.id === id; }); }
+  // Every answer staff can work on: the live merged list, plus the ones they deleted.
+  function everyAnswer() {
+    const list = HC.entries.map(function (e) { return { e: e, status: e.reviewed ? 'published' : 'draft' }; });
+    rows.filter(function (r) { return r.status === 'deleted'; }).forEach(function (r) { list.push({ e: r, status: 'deleted' }); });
+    return list;
   }
+  function el(tag, text, cls) { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; }
+
+  function renderList() {
+    const q = $('hcFind').value.toLowerCase().split(/\s+/).filter(Boolean);
+    const want = $('hcStatus').value;
+    const all = everyAnswer();
+    const shown = all.filter(function (x) {
+      if (want === 'edited') { if (!rowFor(x.e.id)) return false; }
+      else if (want !== 'all' && x.status !== want) return false;
+      const hay = (x.e.q + ' ' + x.e.a + ' ' + x.e.topic + ' ' + (x.e.steps || []).join(' ')).toLowerCase();
+      return q.every(function (w) { return hay.indexOf(w) !== -1; });
+    });
+    const counts = { published: 0, draft: 0, deleted: 0 };
+    all.forEach(function (x) { counts[x.status]++; });
+    $('hcCount').textContent = counts.published + ' published, ' + counts.draft + ' drafts, ' + counts.deleted + ' deleted. ' + rows.length + ' edited here.';
+    const tb = document.querySelector('#answersTable tbody');
+    tb.textContent = '';
+    shown.forEach(function (x) {
+      const tr = document.createElement('tr');
+      const qTd = el('td', x.e.q);
+      if (rowFor(x.e.id)) { const m = el('span', ' Edited', 'a-pill a-pill-neutral'); m.style.marginLeft = '6px'; qTd.appendChild(m); }
+      tr.appendChild(qTd);
+      tr.appendChild(el('td', x.e.topic));
+      tr.appendChild(el('td', (x.e.for || (x.e.audiences || [])).join(', ')));
+      const st = el('td'); st.appendChild(el('span', x.status === 'published' ? 'Published' : x.status === 'draft' ? 'Draft' : 'Deleted',
+        'a-pill ' + (x.status === 'published' ? 'a-pill-success' : x.status === 'draft' ? 'a-pill-warning' : 'a-pill-danger')));
+      tr.appendChild(st);
+      const act = el('td'); const b = el('button', 'Edit', 'a-btn a-btn-outline a-btn-sm'); b.type = 'button'; b.dataset.id = x.e.id;
+      b.addEventListener('click', function () { openEditor(this.dataset.id); });
+      act.appendChild(b); tr.appendChild(act);
+      tb.appendChild(tr);
+    });
+    $('hcEmpty').style.display = shown.length ? 'none' : 'block';
+    $('answersTable').style.display = shown.length ? '' : 'none';
+  }
+
+  function fillStaticChoices() {
+    const topics = [];
+    HC.entries.forEach(function (e) { if (topics.indexOf(e.topic) === -1) topics.push(e.topic); });
+    topics.forEach(function (t) { const o = document.createElement('option'); o.value = t; $('hcTopics').appendChild(o); });
+    HELP_TOPICS.forEach(function (t) { const o = el('option', t[1]); o.value = t[0]; $('hcHelp').appendChild(o); });
+    HC.audiences.forEach(function (a) {
+      const l = document.createElement('label'); l.className = 'a-tag-check';
+      const c = document.createElement('input'); c.type = 'checkbox'; c.value = a.id; c.name = 'hcAudience';
+      l.appendChild(c); l.appendChild(document.createTextNode(' ' + a.title)); $('hcAud').appendChild(l);
+    });
+  }
+
+  function slugFromQuestion(q) {
+    return String(q || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').split('-').slice(0, 7).join('-').slice(0, 60).replace(/-+$/g, '');
+  }
+  function freshId(q) {
+    let base = slugFromQuestion(q) || 'new-answer';
+    if (base.length < 3) base = 'answer-' + base;
+    let id = base, n = 2;
+    while (HC.byId(id) || rowFor(id)) { id = base.slice(0, 55) + '-' + n++; }
+    return id;
+  }
+
+  function setMsg(text, bad) {
+    const m = $('hcMsg');
+    if (!text) { m.style.display = 'none'; return; }
+    m.textContent = text; m.style.display = 'block';
+    m.style.borderLeft = '4px solid ' + (bad ? '#c0392b' : '#b26a00');
+  }
+
+  function fillForm(e, status) {
+    $('hcQ').value = e.q || e.question || '';
+    $('hcA').value = e.a || e.answer || '';
+    $('hcSteps').value = (e.steps || []).join('\n');
+    $('hcTopic').value = e.topic || '';
+    $('hcHelp').value = e.help || e.helpTopic || 'other';
+    $('hcVideo').value = e.video || '';
+    $('hcState').value = status;
+    const mine = e.for || e.audiences || [];
+    document.querySelectorAll('input[name=hcAudience]').forEach(function (c) { c.checked = mine.indexOf(c.value) !== -1; });
+    $('hcHistory').textContent = '';
+    setMsg('');
+    updateHint();
+  }
+  function updateHint() {
+    const words = $('hcA').value.split(/\s+/).filter(Boolean).length;
+    $('hcAHint').textContent = words + ' words. Quick answers work best at 1 to 4 sentences.';
+  }
+
+  function openEditor(id) {
+    const live = HC.byId(id), row = rowFor(id);
+    const e = live || row;
+    if (!e) return;
+    editing = { id: id, isNew: false };
+    $('hcTitle').textContent = 'Edit answer';
+    fillForm(e, row ? row.status : (e.reviewed ? 'published' : 'draft'));
+    $('hcId').textContent = 'Answer id: ' + id + ' (it never changes)';
+    $('hcRevert').style.display = row && inBase(id) ? '' : 'none';
+    $('hcHist').style.display = row ? '' : 'none';
+    $('hcOverlay').classList.add('show'); $('hcQ').focus();
+  }
+  function openNew() {
+    editing = { id: null, isNew: true };
+    $('hcTitle').textContent = 'Add an answer';
+    fillForm({ for: ['everyone'], help: 'other' }, 'draft');
+    $('hcId').textContent = 'The id is made from the question when you save, and it never changes after that.';
+    $('hcRevert').style.display = 'none'; $('hcHist').style.display = 'none';
+    $('hcOverlay').classList.add('show'); $('hcQ').focus();
+  }
+  function closeEditor() { $('hcOverlay').classList.remove('show'); editing = null; }
+
+  function collect() {
+    return {
+      question: $('hcQ').value, answer: $('hcA').value,
+      steps: $('hcSteps').value.split('\n'),
+      topic: $('hcTopic').value, helpTopic: $('hcHelp').value, video: $('hcVideo').value.trim(),
+      status: $('hcState').value,
+      audiences: Array.prototype.map.call(document.querySelectorAll('input[name=hcAudience]:checked'), function (c) { return c.value; })
+    };
+  }
+
+  async function reloadRows() {
+    const r = await fetch('/api/admin/help-answers', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return false;
+    const d = await r.json().catch(function () { return null; });
+    if (!d || !Array.isArray(d.answers)) return false;
+    rows = d.answers;
+    HC.applyAdmin(d);
+    return true;
+  }
+
+  async function save() {
+    if (!editing) return;
+    const body = collect();
+    if (body.video && window.FNHelpVideos && !FNHelpVideos.videos.some(function (v) { return v.id === body.video; })) {
+      setMsg('There is no help video with the id ' + body.video + '.', true); return;
+    }
+    const id = editing.isNew ? freshId(body.question) : editing.id;
+    $('hcSave').disabled = true;
+    try {
+      const r = await fetch('/api/admin/help-answers/' + encodeURIComponent(id), {
+        method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      if (fnHandleUnauthorized(r)) return;
+      const d = await r.json().catch(function () { return {}; });
+      if (!r.ok) { setMsg(d.error || 'Could not save.', true); return; }
+      await reloadRows();
+      renderList();
+      closeEditor();
+      fnToast(d.warnings && d.warnings.length ? 'Saved. ' + d.warnings[0] : 'Saved. Visitors see it within a minute.');
+    } finally { $('hcSave').disabled = false; }
+  }
+
+  async function revert() {
+    if (!editing || !confirm('Go back to the answer in help-center.js? What you saved here stays in the earlier versions.')) return;
+    const id = editing.id;
+    const r = await fetch('/api/admin/help-answers/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (fnHandleUnauthorized(r)) return;
+    if (!r.ok) { const d = await r.json().catch(function () { return {}; }); setMsg(d.error || 'Could not revert.', true); return; }
+    const original = HC.base.filter(function (b) { return b.id === id; })[0];
+    if (original) HC.apply({ entries: [clone(original)] });
+    await reloadRows();
+    renderList(); closeEditor(); fnToast('Back to the original.');
+  }
+
+  async function showHistory() {
+    if (!editing) return;
+    const box = $('hcHistory'); box.textContent = '';
+    const r = await fetch('/api/admin/help-answers/' + encodeURIComponent(editing.id) + '/versions', { credentials: 'include' });
+    if (fnHandleUnauthorized(r)) return;
+    const d = await r.json().catch(function () { return { versions: [] }; });
+    if (!d.versions.length) { box.appendChild(el('div', 'No earlier versions yet.', 'a-note')); return; }
+    d.versions.forEach(function (v) {
+      const line = el('div'); line.style.cssText = 'display:flex; gap:10px; align-items:center; padding:6px 0; border-top:1px solid var(--a-border);';
+      line.appendChild(el('span', fnFormatDate(v.savedAt) + (v.savedBy ? ' by ' + v.savedBy : '') + ': ' + String((v.entry && v.entry.q) || '').slice(0, 80)));
+      const b = el('button', 'Load into the form', 'a-btn a-btn-outline a-btn-sm'); b.type = 'button'; b.style.marginLeft = 'auto';
+      b.addEventListener('click', function () { fillForm(v.entry, v.entry.status || 'draft'); setMsg('Loaded. Save to make it the live version.'); });
+      line.appendChild(b); box.appendChild(line);
+    });
+  }
+
+  fillStaticChoices();
+  $('hcFind').addEventListener('input', renderList);
+  $('hcStatus').addEventListener('change', renderList);
+  $('hcAdd').addEventListener('click', openNew);
+  $('hcClose').addEventListener('click', closeEditor);
+  $('hcCancel').addEventListener('click', closeEditor);
+  $('hcSave').addEventListener('click', save);
+  $('hcRevert').addEventListener('click', revert);
+  $('hcHist').addEventListener('click', showHistory);
+  $('hcA').addEventListener('input', updateHint);
+  $('hcOverlay').addEventListener('click', function (ev) { if (ev.target === $('hcOverlay')) closeEditor(); });
+  HC.ready.then(reloadRows).then(function () { renderList(); });
 })();
 
 (function renderVideos() {

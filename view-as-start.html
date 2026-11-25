@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Staff view</title>
+<link rel="stylesheet" href="fonts.css?v=1">
+<style>
+  body{font-family:'Plus Jakarta Sans',system-ui,sans-serif; background:#FBF5EC; color:#2A2420; margin:0; display:flex; min-height:100vh; align-items:center; justify-content:center;}
+  .box{max-width:460px; padding:28px; text-align:center;}
+  h1{font-size:20px; margin:0 0 8px;} p{color:#6B5F55; margin:0;}
+</style>
+</head>
+<body>
+<div class="box"><h1 id="t">Starting the staff view</h1><p id="m">One moment.</p></div>
+<script>
+(function () {
+  // The link carries the view's token in the part after the #, which the browser never sends to a server. It is moved into this tab's own
+  // sessionStorage (so no other tab is affected) and removed from the address bar before anything else happens.
+  var params = new URLSearchParams(location.hash.slice(1));
+  var token = params.get('t') || '', to = params.get('to') || '';
+  history.replaceState(null, '', location.pathname);
+  function stop(msg) { document.getElementById('t').textContent = 'The staff view did not start'; document.getElementById('m').textContent = msg; }
+  if (!token || ['teacher-classrooms.html', 'school-admin-dashboard.html', 'district-admin-dashboard.html'].indexOf(to) === -1) { stop('Close this tab and start it again from Account Lookup.'); return; }
+  try { sessionStorage.setItem('fnViewAsToken', token); } catch (e) { stop('This browser would not keep the view. Allow site storage and try again.'); return; }
+  fetch('/api/view-as/status', { credentials: 'include', headers: { 'X-View-As': token } }).then(function (r) {
+    if (!r.ok) { sessionStorage.removeItem('fnViewAsToken'); stop('The view has already ended, or your admin sign-in has. Sign in again and start it again.'); return; }
+    location.replace(to);
+  }).catch(function () { stop('Could not reach the site. Close this tab and try again.'); });
+})();
+</script>
+</body>
+</html>

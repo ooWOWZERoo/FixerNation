@@ -16,6 +16,9 @@ const AUD = {
   // Not a login session: the cookie a visitor gets after entering the shared demo's access code, which lets the demo page show the demo
   // logins. Its own audience means it can never stand in for a site, student or admin session.
   demoGate: 'fn:demo-gate',
+  // Not a login session: the token a staff "view as" tab sends in the X-View-As header (lib/view-as.js). It only works together with the same admin's own
+  // fn_session cookie, and its own audience means it can never stand in for a site, student or admin session.
+  viewAs: 'fn:view-as',
 };
 const ISSUER = 'fixernation';
 

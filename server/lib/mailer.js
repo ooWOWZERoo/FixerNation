@@ -262,6 +262,23 @@ async function sendTaskReminderEmail({ to, title, dueOn, about, linkUrl }) {
   });
 }
 
+// Error spike alerts (lib/error-alerts.js). STAFF ONLY: `to` is one address from the admin-set recipient list, and an empty or malformed one is refused
+// rather than falling back to the sales inbox. The subject starts with "Error alert" on purpose: if this email fails, the failure is recorded as an
+// email_failed error, and lib/error-alerts.js skips any failure whose subject starts that way so a broken mail server cannot make alerts about alerts.
+// `lines` are plain text built from stored error fields (never an IP, a token, a full email address or a student identifier).
+async function sendErrorAlertEmail({ to, lines, more = 0, linkUrl, test = false }) {
+  if (typeof to !== 'string' || !/^[^\s@]+@[^\s@]+$/.test(to.trim())) throw new Error('An error alert needs a staff email address.');
+  const fields = {};
+  (lines || []).slice(0, 10).forEach((l, i) => { fields[`Problem ${i + 1}`] = l; });
+  if (more > 0) fields['And'] = `${more} more. Open the Errors page to see them all.`;
+  if (test) fields['Test'] = 'This is a test message. Nothing is wrong.';
+  return sendSalesAlertEmail({
+    to: to.trim(),
+    subject: test ? 'Error alert test' : `Error alert: ${(lines || []).length + (more > 0 ? more : 0)} problem${(lines || []).length + (more > 0 ? more : 0) === 1 ? '' : 's'} on the site`,
+    fields, linkUrl, linkLabel: 'Open the Errors page',
+  });
+}
+
 // Sales CRM meetings (phase 3): one email carrying a calendar invitation (.ics). `ics` is built by lib/crm-ics.js; `method` is REQUEST (invite or update) or
 // CANCEL. Sent from the system address with Reply-To set to the organizer, so a reply reaches the staff member who set the meeting up.
 async function sendMeetingInviteEmail({ to, replyTo, subject, text, html, ics, method }) {
@@ -634,4 +651,4 @@ async function sendQuoteEmail({ billTo, shipTo, to, firstName, lastName, school,
   });
 }
 
-module.exports = { sendDemoInvitationEmail, sendTaskReminderEmail, addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendRepeatRequestDeclinedEmail, sendSupportEmail, sendMeetingInviteEmail };
+module.exports = { sendDemoInvitationEmail, sendTaskReminderEmail, sendErrorAlertEmail, addressLines, sendCampaignEmail, unsubscribeToken, esc, safeUrl, sendMicrosoftLinkEmail, sendVerificationEmail, sendPasswordResetEmail, sendAdminInviteEmail, sendAdminPasswordResetEmail, sendContactFormEmail, sendInvoiceEmail, sendAutomationEmail, sendTeacherInvitationEmail, sendInvitationReminderEmail, sendSchoolAdminWelcomeEmail, sendDistrictAdminWelcomeEmail, sendLicenseUtilizationAlertEmail, sendTeacherRegisteredNotificationEmail, sendQuoteEmail, sendParentInvitationEmail, sendSalesAlertEmail, sendRepeatRequestDeclinedEmail, sendSupportEmail, sendMeetingInviteEmail };

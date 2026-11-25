@@ -45,6 +45,33 @@
         <div id="errorsEmpty" class="a-empty" style="display:none;">Nothing recorded in this period.</div>
       </div>
 
+
+      <div class="a-card" id="alertsCard" style="margin-top:24px;">
+        <div class="a-card-head"><h2>Email me about spikes</h2></div>
+        <div class="a-note" style="margin:0 0 12px;">
+          Every 10 minutes the site checks the last hour. When one error crosses a limit below, the addresses you list get one email naming it, with a
+          link back here. That error then stays quiet for the quiet hours, and a daily limit applies. Nothing is sent while this is off.
+          If the mail server itself is down an alert can't reach you, so a failed email also shows as a red banner on Mission Control.
+        </div>
+        <div style="margin-bottom:18px;"><label style="display:inline-flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;"><input type="checkbox" id="alOn"> Send alert emails</label></div>
+        <div class="a-field"><label for="alTo">Send to (up to 5 addresses, separated by commas)</label><input type="text" id="alTo" maxlength="400" placeholder="you@example.com"></div>
+        <div class="a-form-row">
+          <div class="a-field"><label for="alReports">Page errors: reports needed</label><input type="number" id="alReports" min="2" max="1000"></div>
+          <div class="a-field"><label for="alBrowsers">Page errors: different browsers needed</label><input type="number" id="alBrowsers" min="2" max="100"></div>
+          <div class="a-field"><label for="alServer">Server errors needed (same error, one hour)</label><input type="number" id="alServer" min="1" max="1000"></div>
+          <div class="a-field"><label for="alQuiet">Quiet hours after an alert</label><input type="number" id="alQuiet" min="1" max="72"></div>
+          <div class="a-field"><label for="alCap">Most alert emails a day</label><input type="number" id="alCap" min="1" max="50"></div>
+        </div>
+        <div class="a-label-hint" style="margin-bottom:12px;">Any email that could not be sent always counts (one is enough).</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <button type="button" class="a-btn a-btn-primary a-btn-sm" id="alSave">Save</button>
+          <button type="button" class="a-btn a-btn-outline a-btn-sm" id="alTest">Send a test alert</button>
+        </div>
+        <div id="alMsg" class="a-note" style="display:none; margin:0 0 12px;"></div>
+        <h3 style="margin:8px 0 6px; font-size:14px;">Recent alerts</h3>
+        <table class="a-table" id="alRecent"><thead><tr><th>When</th><th>What</th><th>Result</th></tr></thead><tbody></tbody></table>
+        <div id="alEmpty" class="a-empty" style="display:none;">No alerts yet.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -103,6 +130,48 @@ async function clearErrorGroup(i) {
 }
 
 loadErrors();
+
+// ---- Spike alerts ----
+(function spikeAlerts() {
+  function $(id) { return document.getElementById(id); }
+  function text(tag, t) { const n = document.createElement(tag); n.textContent = t; return n; }
+  function say(t, bad) { const m = $('alMsg'); if (!t) { m.style.display = 'none'; return; } m.textContent = t; m.style.display = 'block'; m.style.borderLeft = '4px solid ' + (bad ? '#c0392b' : '#2e7d32'); }
+  function fill(d) {
+    $('alOn').checked = d.enabled; $('alTo').value = d.recipients.join(', ');
+    $('alReports').value = d.browserReports; $('alBrowsers').value = d.browsers; $('alServer').value = d.serverErrors; $('alQuiet').value = d.quietHours; $('alCap').value = d.dailyCap;
+    const tb = document.querySelector('#alRecent tbody'); tb.textContent = '';
+    d.recent.forEach(function (r) {
+      const tr = document.createElement('tr');
+      tr.appendChild(text('td', fmt(r.at))); tr.appendChild(text('td', r.summary)); tr.appendChild(text('td', r.status === 'sent' ? 'Sent' : 'Could not send'));
+      tb.appendChild(tr);
+    });
+    $('alEmpty').style.display = d.recent.length ? 'none' : 'block'; $('alRecent').style.display = d.recent.length ? '' : 'none';
+  }
+  async function call(method, path, body) {
+    const r = await fetch('/api/admin/error-alerts' + path, { method: method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(body || {}) });
+    if (fnHandleUnauthorized(r)) return null;
+    const j = await r.json().catch(function () { return {}; });
+    return { ok: r.ok, data: j };
+  }
+  $('alSave').addEventListener('click', async function () {
+    const res = await call('PUT', '', {
+      enabled: $('alOn').checked, recipients: $('alTo').value,
+      browserReports: Number($('alReports').value), browsers: Number($('alBrowsers').value), serverErrors: Number($('alServer').value),
+      quietHours: Number($('alQuiet').value), dailyCap: Number($('alCap').value)
+    });
+    if (!res) return;
+    if (!res.ok) { say(res.data.error || 'Could not save.', true); return; }
+    fill(res.data); say('Saved.');
+  });
+  $('alTest').addEventListener('click', async function () {
+    const res = await call('POST', '/test', {});
+    if (!res) return;
+    if (!res.ok) { say(res.data.error || 'Could not send the test.', true); return; }
+    say(res.data.ok ? 'Test sent to ' + res.data.sent + ' address' + (res.data.sent === 1 ? '' : 'es') + (res.data.failed ? ' (' + res.data.failed + ' failed).' : '.') : 'The test could not be sent.', !res.data.ok);
+    const again = await call('GET', ''); if (again && again.ok) fill(again.data);
+  });
+  call('GET', '').then(function (res) { if (res && res.ok) fill(res.data); });
+})();
 </script>
 <script src="admin-shell.js?v=13"></script>
 <script src="help-videos.js?v=25" defer></script>

@@ -23,6 +23,12 @@ const adminSupportRoutes = require('./routes/admin-support');
 const adminSupportConsoleRoutes = require('./routes/admin-support-console');
 const clientErrorRoutes = require('./routes/client-errors');
 const adminClientErrorRoutes = require('./routes/admin-client-errors');
+const helpCenterRoutes = require('./routes/help-center');
+const adminHelpAnswerRoutes = require('./routes/admin-help-answers');
+const adminErrorAlertRoutes = require('./routes/admin-error-alerts');
+const adminViewAsRoutes = require('./routes/admin-view-as');
+const viewAsRoutes = require('./routes/view-as');
+const { viewAsGate } = require('./lib/view-as');
 const { recordServerError } = require('./lib/client-errors');
 const { sharedDemoGate } = require('./lib/public-demo');
 const dashboardRoutes = require('./routes/dashboard');
@@ -95,6 +101,9 @@ app.post('/api/checkout/webhook', express.raw({ type: 'application/json' }), che
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
+// Staff "view as" tabs send X-View-As; the gate checks it, keeps the view read-only and on a short list of routes, and supplies the person's identity.
+// Must come before the demo gate and every route: lib/view-as.js.
+app.use('/api', viewAsGate());
 // Shared demo sessions end when the demo closes, and run with restrictions (no outside email, downloads or uploads) while it is open.
 // Must come before every route: lib/public-demo.js.
 app.use('/api', sharedDemoGate);
@@ -146,6 +155,11 @@ app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/admin/support-console', adminSupportConsoleRoutes);
 app.use('/api/client-errors', clientErrorRoutes);
 app.use('/api/admin/client-errors', adminClientErrorRoutes);
+app.use('/api/help-center', helpCenterRoutes);
+app.use('/api/admin/help-answers', adminHelpAnswerRoutes);
+app.use('/api/admin/error-alerts', adminErrorAlertRoutes);
+app.use('/api/admin/view-as', adminViewAsRoutes);
+app.use('/api/view-as', viewAsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);

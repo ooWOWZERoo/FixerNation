@@ -1,7 +1,8 @@
 /* Help center: the one list of questions and answers (Release 123, seeded in Release 124). Shown by help.html and, for a few, at the top of
    support.html.
 
-   TO ADD OR CHANGE AN ANSWER: edit the entry below. Keep answers short (1 to 4 sentences), in plain words, and check them against how the
+   TO ADD OR CHANGE AN ANSWER: use Support > Help Content in the admin (the editor saves to the database and is laid on top of this list), or
+   edit the entry below. An answer staff have edited there wins over the one here; "Revert to the original" brings this one back. Keep answers short (1 to 4 sentences), in plain words, and check them against how the
    site really works (the code, the help video scripts, the public pages). Entries marked as drafts with D(...) are hidden from visitors until
    the owner has read them at help.html?preview=1 and the entry is switched to E(...). Anything about pricing, timings we promise, privacy
    or legal wording, or research claims starts as a draft.
@@ -521,5 +522,36 @@
     });
   }
 
-  window.FNHelpCenter = { audiences: AUDIENCES, entries: ENTRIES, visible: visible, byId: byId, forAudience: forAudience, search: search };
+  // Answers edited in the browser (Support > Help Content) are saved in the database and laid on top of this list, so an unedited answer
+  // always comes from this file and a database problem leaves the file's answers showing. Rows: { entries: [...], hidden: [ids], removed: [ids] }.
+  //   entries  an answer to show instead of (or in addition to) the file's answer with the same id
+  //   hidden   answers to keep but not show visitors (un-published); removed: answers to drop (deleted)
+  var BASE = ENTRIES.map(function (e) { return JSON.parse(JSON.stringify(e)); }); // the file's own copy, for "Edited" marks and "revert"
+  function indexOf(id) { for (var i = 0; i < ENTRIES.length; i++) if (ENTRIES[i].id === id) return i; return -1; }
+  function apply(data) {
+    if (!data || typeof data !== 'object') return;
+    (data.entries || []).forEach(function (e) {
+      if (!e || typeof e.id !== 'string' || !Array.isArray(e.for)) return;
+      var i = indexOf(e.id);
+      if (i === -1) ENTRIES.push(e); else ENTRIES[i] = e;
+    });
+    (data.hidden || []).forEach(function (id) { var e = byId(id); if (e) e.reviewed = false; });
+    (data.removed || []).forEach(function (id) { var i = indexOf(id); if (i !== -1) ENTRIES.splice(i, 1); });
+  }
+  // The staff list (GET /api/admin/help-answers): drafts show as not reviewed, deleted answers are dropped.
+  function applyAdmin(d) {
+    if (!d || !Array.isArray(d.answers)) return;
+    apply({
+      entries: d.answers.filter(function (a) { return a.status !== 'deleted'; }),
+      removed: d.answers.filter(function (a) { return a.status === 'deleted'; }).map(function (a) { return a.id; })
+    });
+  }
+  // Resolves once the edited answers have been applied (or could not be fetched: the file's answers stay). Pages render after it.
+  var ready = Promise.resolve();
+  if (typeof fetch === 'function' && typeof location !== 'undefined') {
+    ready = fetch('/api/help-center', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; }).then(apply).catch(function () { /* keep the file's answers */ });
+  }
+
+  window.FNHelpCenter = { audiences: AUDIENCES, entries: ENTRIES, base: BASE, visible: visible, byId: byId, forAudience: forAudience, search: search, apply: apply, applyAdmin: applyAdmin, ready: ready };
 })();

@@ -1648,6 +1648,68 @@ CREATE TABLE IF NOT EXISTS client_errors (
   INDEX idx_session (client_session_id, last_seen)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Staff "view as" (phase C of docs/reference/help-support-tools-requirements.md): one row per view a CRM Admin started on a teacher, school administrator or
+-- district administrator. The reason lives here, not in the audit log. Kept 2 years. Added to existing installs by scripts/alter-create-view-as.js.
+CREATE TABLE IF NOT EXISTS view_as_sessions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT UNSIGNED NOT NULL,
+  target_site_user_id INT UNSIGNED NOT NULL,
+  reason VARCHAR(200) NOT NULL DEFAULT '',
+  jti CHAR(32) NOT NULL, -- the id inside the signed token; a token whose row is ended or missing is refused
+  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  ended_at DATETIME NULL,
+  ended_by VARCHAR(16) NULL, -- 'stop' | 'replaced' | 'expired'
+  UNIQUE KEY uq_jti (jti),
+  INDEX idx_target (target_site_user_id, id),
+  INDEX idx_admin (admin_id, ended_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Error spike alerts (phase B of docs/reference/help-support-tools-requirements.md): one row per error group named in an alert email, so the quiet period and
+-- the daily limit can be kept. 'failed' rows record an alert email that could not be sent; 'test' rows come from the test button. Added to existing
+-- installs by scripts/alter-create-error-alerts.js. Rows older than 90 days are deleted by scripts/alert-error-spikes.js.
+CREATE TABLE IF NOT EXISTS error_alerts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  group_key CHAR(40) NOT NULL DEFAULT '', -- sha1 of the client_errors group fields; '' for a test or a failed batch
+  kind VARCHAR(24) NOT NULL DEFAULT '', -- the error kind, or 'test' or 'batch'
+  summary VARCHAR(300) NOT NULL DEFAULT '', -- the line that went in the email (stored error fields only)
+  reports INT UNSIGNED NOT NULL DEFAULT 0,
+  browsers INT UNSIGNED NOT NULL DEFAULT 0,
+  status VARCHAR(8) NOT NULL DEFAULT 'sent', -- 'sent' | 'failed'
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_group (group_key, created_at),
+  INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Help center answers edited in the browser (Support > Help Content). A row overrides the answer with that id in help-center.js, or adds a
+-- new one; an empty table changes nothing. Added to existing installs by scripts/alter-create-help-answers.js. Requirements:
+-- docs/reference/help-support-tools-requirements.md, section A.
+CREATE TABLE IF NOT EXISTS help_answers (
+  id VARCHAR(60) NOT NULL PRIMARY KEY, -- the stable slug; never changes (the anonymous faq_open count records it)
+  status VARCHAR(12) NOT NULL DEFAULT 'draft', -- 'published' | 'draft' | 'deleted'
+  audiences VARCHAR(120) NOT NULL DEFAULT 'everyone',
+  topic VARCHAR(60) NOT NULL DEFAULT '',
+  help_topic VARCHAR(40) NOT NULL DEFAULT 'other',
+  video VARCHAR(8) NOT NULL DEFAULT '',
+  question VARCHAR(300) NOT NULL DEFAULT '',
+  answer TEXT NOT NULL,
+  steps TEXT NOT NULL, -- JSON array of short strings
+  sort_order INT NOT NULL DEFAULT 0,
+  updated_by INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS help_answer_versions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  answer_id VARCHAR(60) NOT NULL,
+  snapshot TEXT NOT NULL, -- the answer as it was before this save, JSON
+  saved_by INT UNSIGNED NULL,
+  saved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_answer (answer_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ---------------------------------------------------------------------------
 -- Graduate Evidence year snapshot (Release 155): de-identified totals per classroom, school year and attribute, written once by
 -- scripts/snapshot-pog-evidence.js (and later by the student-data purge, before it deletes students). Counts only: no student id,

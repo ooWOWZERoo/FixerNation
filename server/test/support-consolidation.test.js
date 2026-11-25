@@ -76,25 +76,27 @@ test('ACCOUNT ACTIONS: everything that was on Account Lookup is still there', ()
   }
 });
 
-test('HELP CONTENT: read-only, reads the two static lists, writes nothing and builds no HTML from data', () => {
+test('HELP CONTENT: shows the two lists, saves only through the staff answers route (Release 172 editor), and builds no HTML from data', () => {
   const page = read('admin-support-help.html');
   assert.match(page, /FNHelpCenter/); assert.match(page, /FNHelpVideos/);
   assert.match(page, /api\/settings\/contact-emails/); assert.match(page, /api\/settings\/privacy-lock/);
   assert.ok(!/innerHTML\s*=/.test(page), 'built with textContent only');
-  assert.ok(!/method:\s*'(POST|PUT|DELETE)'/.test(page), 'the page only reads');
+  const writes = [...page.matchAll(/method:\s*'(POST|PUT|DELETE)'[^}]*/g)];
+  assert.ok(writes.length > 0, 'the editor saves');
+  assert.ok(page.split(/fetch\(/).slice(1).filter(c => /method:\s*'(POST|PUT|DELETE)'/.test(c.slice(0, 220))).every(c => /^'\/api\/admin\/help-answers\//.test(c)), 'the only writes go to the staff answers route');
   assert.equal(page.match(/help-center\.js\?v=(\d+)/)[1], read('help.html').match(/help-center\.js\?v=(\d+)/)[1], 'same help-center.js version as the Help center');
   assert.match(read('server/routes/settings.js'), /router\.get\('\/contact-emails', requireAuth/);
 });
 
 test('ACCESS: every route behind the Support pages is still the admin login, and no new endpoint was added for them', () => {
-  for (const f of ['admin-support.js', 'admin-support-console.js', 'admin-client-errors.js', 'admin-account-lookup.js']) {
+  for (const f of ['admin-support.js', 'admin-support-console.js', 'admin-client-errors.js', 'admin-account-lookup.js', 'admin-help-answers.js', 'admin-error-alerts.js']) {
     const src = read('server/routes/' + f);
     const lines = src.split('\n').filter(l => /^router\.(get|post|put|delete)\(/.test(l));
     assert.ok(lines.length > 0, f);
     for (const l of lines) assert.match(l, /requireAuth/, `${f}: ${l.slice(0, 60)}`);
   }
   // the new pages only call routes that already existed
-  const allowed = [/^\/api\/admin\/support/, /^\/api\/admin\/support-console/, /^\/api\/admin\/client-errors/, /^\/api\/admin\/account-lookup/, /^\/api\/settings\/(contact-emails|privacy-lock)/];
+  const allowed = [/^\/api\/admin\/support/, /^\/api\/admin\/support-console/, /^\/api\/admin\/client-errors/, /^\/api\/admin\/account-lookup/, /^\/api\/admin\/help-answers/, /^\/api\/admin\/error-alerts/, /^\/api\/settings\/(contact-emails|privacy-lock)/];
   for (const f of ['admin-support-classrooms.html', 'admin-support-errors.html', 'admin-support-help.html']) {
     for (const m of read(f).matchAll(/'(\/api\/[^'?]*)/g)) assert.ok(allowed.some(re => re.test(m[1])), `${f} calls ${m[1]}`);
   }

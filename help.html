@@ -98,11 +98,11 @@
 <script>fnTrackPageview();</script>
 <script src="cart.js"></script>
 <script src="referral.js?v=1"></script>
-<script src="nav.js?v=22"></script>
+<script src="nav.js?v=23"></script>
 <script src="site-auth.js?v=12"></script>
 <script src="footer.js?v=18"></script>
 <script src="help-videos.js?v=25"></script>
-<script src="help-center.js?v=16"></script>
+<script src="help-center.js?v=17"></script>
 <script>
 (function () {
   var HC = window.FNHelpCenter;
@@ -167,8 +167,12 @@
   }
 
   search.addEventListener('input', render);
-  buildTabs();
-  render();
+  // Wait for the edited answers (Support > Help Content) to be laid over the file's list. The preview also asks for drafts, which only a
+  // signed-in admin is given.
+  HC.ready.then(function () {
+    if (!preview) return null;
+    return fetch('/api/admin/help-answers', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { HC.applyAdmin(d); }).catch(function () {});
+  }).then(function () { buildTabs(); render(); });
 })();
 </script>
 </body>

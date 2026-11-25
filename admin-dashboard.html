@@ -62,6 +62,9 @@
     </div>
 
     <div class="a-content">
+      <div id="emailFailBanner" role="alert" hidden style="margin:0 0 16px; padding:12px 16px; border-radius:10px; background:#7b1f1f; color:#fff; font-weight:600;">
+        <span id="emailFailText"></span> <a href="admin-support-errors.html" style="color:#fff; text-decoration:underline;">Open the Errors page</a>
+      </div>
       <div class="a-stat-grid-featured">
         <div class="a-stat-card-featured">
           <div class="label">Sales Today</div>
@@ -500,6 +503,12 @@ async function loadSupportAttention() {
       fetch('/api/admin/client-errors?hours=24', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
     ]);
     supportAttention = { newRequests: (a && Number(a['new'])) || 0, errors24: (b && Number(b.last24Hours)) || 0 };
+    // Email is how password resets, invitations and alerts reach people, so a failed send is shown here in red whatever else is going on.
+    const failedMail = (b && Array.isArray(b.groups) ? b.groups : []).filter(g => g.kind === 'email_failed').reduce((n, g) => n + (Number(g.total) || 0), 0);
+    if (failedMail > 0) {
+      document.getElementById('emailFailText').textContent = failedMail + ' email' + (failedMail === 1 ? '' : 's') + ' could not be sent in the last 24 hours. Password resets and invitations may not be arriving.';
+      document.getElementById('emailFailBanner').hidden = false;
+    }
     if (lastAttentionData) renderNeedsAttention(lastAttentionData);
   } catch (e) { /* the card just stays without the Support rows */ }
 }

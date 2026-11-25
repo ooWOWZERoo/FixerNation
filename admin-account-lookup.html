@@ -153,8 +153,44 @@ function renderAccount(account, demo) {
       '<button class="a-btn a-btn-outline a-btn-sm" onclick="signOutEverywhere(' + account.id + ')">Sign out everywhere</button>' +
       (account.email_verified ? '' : '<button class="a-btn a-btn-outline a-btn-sm" onclick="resendVerification(' + account.id + ')">Resend verification email</button>') +
       '<a class="a-btn a-btn-outline a-btn-sm" href="admin-support-classrooms.html?parent=' + encodeURIComponent(account.email) + '">Open parent view</a>' +
+      (account.closed_at ? '' : '<button class="a-btn a-btn-outline a-btn-sm" onclick="startViewAs(' + account.id + ')" title="Opens a read-only copy of this person\'s screens in a new tab. Student names and writing are never shown.">View as…</button>') +
     '</div>' +
+    '<div id="viewHistory" style="margin-top:14px; display:none;"></div>' +
     '<div id="resetLinkBox" class="a-note" style="display:none; margin-top:12px; border-left:4px solid var(--a-success,#1f7a4d);"></div>';
+  loadViewHistory(account.id);
+}
+
+// Staff "view as": a read-only copy of a teacher's, school administrator's or district administrator's screens, with the student data left out.
+// Only a CRM Admin can start one (the server decides); the history shows who looked, when and why.
+async function startViewAs(id) {
+  const reason = prompt('Why are you viewing this account? Write a short reason, for example the support request number. It is saved with the view.');
+  if (reason === null) return;
+  const tab = window.open('', '_blank');   // opened now, while the click still counts, and pointed at the launcher once the server answers
+  if (tab) tab.opener = null;
+  const r = await fetch('/api/admin/view-as/start', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteUserId: id, reason: reason }) });
+  if (fnHandleUnauthorized(r)) { if (tab) tab.close(); return; }
+  const d = await r.json().catch(function () { return {}; });
+  if (!r.ok) { if (tab) tab.close(); fnToast(d.error || 'Could not start the view', 'error'); return; }
+  const url = 'view-as-start.html#t=' + encodeURIComponent(d.token) + '&to=' + encodeURIComponent(d.landing);
+  if (tab) tab.location.href = url; else fnToast('Your browser blocked the new tab. Allow pop-ups for this site and try again.', 'error');
+  loadViewHistory(id);
+}
+async function loadViewHistory(id) {
+  const box = document.getElementById('viewHistory');
+  if (!box) return;
+  const r = await fetch('/api/admin/view-as/history/' + encodeURIComponent(id), { credentials: 'include' });
+  if (!r.ok) { box.style.display = 'none'; return; }   // 403 for anyone who is not a CRM Admin
+  const d = await r.json().catch(function () { return { views: [] }; });
+  box.textContent = '';
+  if (!d.views.length) { box.style.display = 'none'; return; }
+  const h = document.createElement('div'); h.style.cssText = 'font-weight:700; font-size:13px; margin-bottom:6px;'; h.textContent = 'Staff views of this account';
+  box.appendChild(h);
+  d.views.forEach(function (v) {
+    const line = document.createElement('div'); line.style.cssText = 'font-size:13px; color:var(--a-text-soft); padding:3px 0;';
+    line.textContent = fmtDateTime(v.startedAt) + ': ' + v.staff + ' (' + (v.endedAt ? 'ended, ' + String(v.endedBy || '').replace(/_/g, ' ') : 'open') + '). ' + v.reason;
+    box.appendChild(line);
+  });
+  box.style.display = 'block';
 }
 
 async function postJson(url) {

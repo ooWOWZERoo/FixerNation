@@ -25,6 +25,7 @@ ENTRIES=(
   "50 6 * * * $NODE $SCRIPTS/crm-daily-attention.js --apply --only-if-enabled >> $LOGS/cron-crm-attention.log 2>&1"
   "10 7 * * * $NODE $SCRIPTS/crm-renewals.js --apply --only-if-enabled >> $LOGS/cron-crm-renewals.log 2>&1"
   "*/5 * * * * $NODE $SCRIPTS/crm-task-reminders.js --apply --only-if-enabled >> $LOGS/cron-crm-task-reminders.log 2>&1"
+  "*/10 * * * * $NODE $SCRIPTS/alert-error-spikes.js --apply >> $LOGS/cron-error-alerts.log 2>&1"
 )
 
 CURRENT=$(crontab -l 2>/dev/null || true)

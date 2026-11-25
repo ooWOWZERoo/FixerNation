@@ -2,6 +2,13 @@
    Every portal page has <aside class="sa-sidebar"></aside>
    followed by <script src="school-admin-nav.js?v=2"></script>. */
 (function () {
+  // Staff "view as" (docs/reference/help-support-tools-requirements.md, section C): only in a tab that was started from Account Lookup. Written into the page
+  // synchronously so it is in place before any later script makes its first call to the API.
+  try {
+    if (sessionStorage.getItem('fnViewAsToken') && !window.__fnViewAs && !document.querySelector('script[src^="view-as.js"]')) {
+      document.write('<script src="view-as.js?v=1"><\/script>');
+    }
+  } catch (e) { /* storage blocked: no view in this tab */ }
   // Error capture (Release 122): load the shared reporter once per page.
   if (!window.__fnErrorCapture && !document.querySelector('script[src^="error-capture.js"]')) {
     var ec = document.createElement('script');

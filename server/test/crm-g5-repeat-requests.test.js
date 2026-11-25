@@ -260,7 +260,7 @@ test('FILES AND RULES: the pages escape what comes from outside, the nav and ver
   assert.match(read('admin-nav.js'), /admin-crm-repeat-requests\.html/); assert.match(read('admin-nav.js'), /"crm-repeat-requests": "</);
   assert.match(read('admin-shell.js'), /'crm-repeat-requests':/);
   assert.match(read('district-admin-nav.js'), /district-admin-renew\.html/);
-  for (const f of ['district-admin-dashboard.html', 'district-admin-renew.html']) assert.match(read(f), /district-admin-nav\.js\?v=15/);
+  for (const f of ['district-admin-dashboard.html', 'district-admin-renew.html']) assert.match(read(f), /district-admin-nav\.js\?v=16/);
   const schema = src('db/schema.sql'), alter = src('scripts/alter-create-crm-repeat-requests.js');
   for (const s of [schema, alter]) { assert.match(s, /CREATE TABLE IF NOT EXISTS crm_repeat_requests/); assert.match(s, /UNIQUE KEY uq_crm_repeat_open \(purchase_id, open_flag\)/); }
   assert.match(alter, /already exists/); assert.match(alter, /information_schema\.TABLES/);

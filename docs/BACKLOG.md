@@ -63,6 +63,7 @@ Things only the owner can do (cPanel, the live admin, own devices). None affects
 - [ ] **Stripe consent.** Card checkout shows the Terms line on our cart only; Stripe's own page has no terms checkbox. Adding one needs a terms URL set in the Stripe dashboard first.
 - [ ] **Emails.** Transactional emails and quote emails carry no Terms or Privacy link yet.
 - [ ] **Accessibility statement, sub-processor list and a downloadable data privacy agreement** are still not on the site (the Student Data Privacy page says the team can provide them on request).
+- [ ] **Staff "view as" sentence** (added 2026-11-24 with the feature, in the Privacy Policy section 7 and Student Data Privacy section 8): support staff may open a read-only copy of a teacher's or administrator's screens, without student names or writing, logged, ending on its own. Have the lawyer read it, and check it against the "authorized FNE staff" line on the Student Data Privacy page and any district data privacy agreement.
 - [ ] **Student data retention.** The Privacy Policy still points to the Student Data Privacy page, which now states today's rule (Release 146). Update both when the purge ships.
 
 ## Help center and support (added 2026-11-06)
@@ -84,6 +85,6 @@ Where it stands: Help center live with 209 published answers and 2 drafts (Relea
 
 ### Later, if it proves useful
 
-- [ ] An in-browser editor for Help center answers (today they change through a release in `help-center.js`).
-- [ ] Email or text alerts for error spikes (the Errors tab only shows counts today).
+- [x] An in-browser editor for Help center answers: built 2026-11-24 (phase A, `docs/reference/help-support-tools-requirements.md`); moves to the changelog once deployed. Alerts for error spikes (phase B) and read-only view as (phase C) are next, in that order.
+- [x] Email alerts for error spikes: built 2026-11-24 (phase B, `docs/reference/help-support-tools-requirements.md`); moves to the changelog once deployed, and the owner still adds addresses and switches it on. Text alerts are not built (they need an outside service such as Twilio and a registered number).
 - [ ] A read-only "view as" for staff (needs its own access requirements first).
